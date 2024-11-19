@@ -85,7 +85,7 @@ HNSW::HNSW(std::shared_ptr<hnswlib::SpaceInterface> space_interface,
                                                        normalize,
                                                        Options::Instance().block_size_limit());
 
-        logger::debug("using HierarchicalNSW.");
+        logger::error("using HierarchicalNSW.");
     } else {
         if (dim_ % 4 != 0) {
             // FIXME(wxyu): remove throw stmt from construct function
@@ -98,7 +98,7 @@ HNSW::HNSW(std::shared_ptr<hnswlib::SpaceInterface> space_interface,
             M,
             ef_construction,
             Options::Instance().block_size_limit());
-        logger::debug("using StaticHierarchicalNSW.");
+        logger::error("using StaticHierarchicalNSW.");
     }
 }
 

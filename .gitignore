@@ -1,4 +1,5 @@
 ############# root #############
+perf.*
 *.a
 *.bak
 *.gcda
@@ -60,6 +61,7 @@ app.info
 autom4te.cache/
 build
 build/
+FlameGraph/
 build_*/
 build_debug
 build_errsim
