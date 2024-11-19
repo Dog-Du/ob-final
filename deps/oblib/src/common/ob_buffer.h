@@ -69,7 +69,7 @@ template <class Alloc = DfltBufferAlloc<> >
 class base_buffer
 {
 public:
-  static const int64_t DEFAULT_CAPACITY = MAX_BUFFER_SIZE - 1 /* BUFSIZ */ ; // 扩大默认的缓冲池大小
+  static const int64_t DEFAULT_CAPACITY = MAX_BUFFER_SIZE / 8 * 7 /* BUFSIZ */ ; // 扩大默认的缓冲池大小为 3.5GB 
   static const bool USE_EXCEPTION = true;
   static const bool NO_EXCEPTION = false;
 protected:
