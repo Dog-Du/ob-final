@@ -17,6 +17,7 @@
 
 #include <pthread.h>
 #include "lib/allocator/ob_malloc.h"
+#include "lib/ob_define.h"
 #include "lib/string/ob_string.h"
 #include "common/data_buffer.h"
 
@@ -68,7 +69,7 @@ template <class Alloc = DfltBufferAlloc<> >
 class base_buffer
 {
 public:
-  static const int64_t DEFAULT_CAPACITY = BUFSIZ;
+  static const int64_t DEFAULT_CAPACITY = MAX_BUFFER_SIZE /* BUFSIZ */ ; // 扩大默认的缓冲池大小
   static const bool USE_EXCEPTION = true;
   static const bool NO_EXCEPTION = false;
 protected:

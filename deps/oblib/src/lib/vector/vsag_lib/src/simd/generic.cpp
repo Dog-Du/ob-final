@@ -25,8 +25,9 @@ L2Sqr(const void* pVect1v, const void* pVect2v, const void* qty_ptr) {
     size_t qty = *((size_t*)qty_ptr);
 
     float res = 0;
+    float t = 0;
     for (size_t i = 0; i < qty; i++) {
-        float t = *pVect1 - *pVect2;
+        t = *pVect1 - *pVect2;
         pVect1++;
         pVect2++;
         res += t * t;
