@@ -85,7 +85,7 @@ public:
   inline int get_ef_construction() {return ef_construction_;}
   inline int get_ef_search() {return ef_search_;}
   inline int get_dim() {return dim_;}
-  
+
 private:
   bool is_created_;
   bool is_build_;
@@ -98,7 +98,7 @@ private:
   vsag::Allocator* allocator_;
 };
 
-int HnswIndexHandler::build_index(const vsag::DatasetPtr& base) 
+int HnswIndexHandler::build_index(const vsag::DatasetPtr& base)
 {
     vsag::ErrorType error = vsag::ErrorType::UNKNOWN_ERROR;
     if (const auto num = index_->Build(base); num.has_value()) {
@@ -109,12 +109,12 @@ int HnswIndexHandler::build_index(const vsag::DatasetPtr& base)
     return static_cast<int>(error);
 }
 
-int HnswIndexHandler::get_index_number() 
+int HnswIndexHandler::get_index_number()
 {
     return index_->GetNumElements();
 }
 
-int HnswIndexHandler::add_index(const vsag::DatasetPtr& incremental) 
+int HnswIndexHandler::add_index(const vsag::DatasetPtr& incremental)
 {
     vsag::ErrorType error = vsag::ErrorType::UNKNOWN_ERROR;
     if (const auto num = index_->Add(incremental); num.has_value()) {
@@ -145,7 +145,7 @@ int HnswIndexHandler::knn_search(const vsag::DatasetPtr& query, int64_t topk,
         for (int64_t i = 0; i < result_size; ++i) {
             vsag::logger::debug("  knn search id : {}, distance : {}",ids[i],dist[i]);
         }
-        return 0; 
+        return 0;
     } else {
         error = result.error().type;
     }
@@ -168,7 +168,7 @@ bool is_init() {
     } else {
         vsag::logger::debug("   Init VsagLib fail");
     }
-    return is_init_; 
+    return is_init_;
 }
 
 
@@ -190,7 +190,7 @@ int create_index(VectorIndexPtr& index_handler, IndexType index_type,
                  const char* dtype,
                  const char* metric, int dim,
                  int max_degree, int ef_construction, int ef_search, void* allocator)
-{   
+{
     vsag::logger::debug("TRACE LOG[test_create_index]:");
     vsag::ErrorType error = vsag::ErrorType::UNKNOWN_ERROR;
     int ret = 0;
@@ -218,7 +218,7 @@ int create_index(VectorIndexPtr& index_handler, IndexType index_type,
                                 {"ef_construction", ef_construction},
                                 {"ef_search", ef_search},
                                 {"use_static", use_static}};
-        nlohmann::json index_parameters{{"dtype", dtype}, {"metric_type", metric}, {"dim", dim}, {"hnsw", hnsw_parameters}}; 
+        nlohmann::json index_parameters{{"dtype", dtype}, {"metric_type", metric}, {"dim", dim}, {"hnsw", hnsw_parameters}};
         if (auto index = vsag::Factory::CreateIndex("hnsw", index_parameters.dump(), vsag_allocator);
             index.has_value()) {
             hnsw = index.value();
@@ -272,7 +272,6 @@ int build_index(VectorIndexPtr& index_handler,float* vector_list, int64_t* ids, 
     }
     return ret;
 }
-
 
 int add_index(VectorIndexPtr& index_handler,float* vector, int64_t* ids, int dim, int size) {
     vsag::logger::debug("TRACE LOG[add_index]:");
@@ -523,7 +522,7 @@ extern int create_index_c(VectorIndexPtr& index_handler, IndexType index_type,
                  const char* dtype,
                  const char* metric, int dim,
                  int max_degree, int ef_construction, int ef_search, void* allocator)
-{   
+{
     return create_index(index_handler, index_type, dtype, metric, dim, max_degree, ef_construction, ef_search, allocator);
 }
 

@@ -1,1 +1,1 @@
-./tools/deploy/obd.sh destroy -n single --rm
+./tools/deploy/obd.sh destroy -n obcluster --rm

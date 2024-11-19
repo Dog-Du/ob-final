@@ -5,18 +5,19 @@
 #include <map>
 namespace obvectorlib {
 
+// 暂时只有HNSW索引，同时操作只有创建索引，删除索引，对索引插入，对索引搜索。不支持对索引删除
 
 int64_t example();
 typedef void* VectorIndexPtr;
 extern bool is_init_;
 enum IndexType {
   INVALID_INDEX_TYPE = -1,
-  HNSW_TYPE = 0,
+  HNSW_TYPE = 0,  // 看来暂时只支持 HNSW，菜。
   MAX_INDEX_TYPE
 };
 /**
  *   * Get the version based on git revision
- *     * 
+ *     *
  *       * @return the version text
  *         */
 extern std::string
@@ -24,7 +25,7 @@ version();
 
 /**
  *   * Init the vsag library
- *     * 
+ *     *
  *       * @return true always
  *         */
 extern bool is_init();
@@ -42,11 +43,16 @@ extern void set_log_level(int64_t level_num);
 extern void set_logger(void *logger_ptr);
 extern void set_block_size_limit(uint64_t size);
 extern bool is_supported_index(IndexType index_type);
+
+// 创建索引操作
 extern int create_index(VectorIndexPtr& index_handler, IndexType index_type,
                         const char* dtype,
                         const char* metric,int dim,
                         int max_degree, int ef_construction, int ef_search, void* allocator = NULL);
+
 extern int build_index(VectorIndexPtr& index_handler, float* vector_list, int64_t* ids, int dim, int size);
+
+//
 extern int add_index(VectorIndexPtr& index_handler, float* vector, int64_t* ids, int dim, int size);
 extern int get_index_number(VectorIndexPtr& index_handler, int64_t &size);
 extern int knn_search(VectorIndexPtr& index_handler,float* query_vector, int dim, int64_t topk,

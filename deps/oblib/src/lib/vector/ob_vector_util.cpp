@@ -99,7 +99,8 @@ int create_index(obvectorlib::VectorIndexPtr& index_handler, int index_type,
 #ifdef OB_BUILD_CDC_DISABLE_VSAG
   return ret;
 #else
-  obvectorlib::set_block_size_limit(2*1024*1024);
+  // obvectorlib::set_block_size_limit(2*1024*1024); // 这里使用的是 2MB，
+  obvectorlib::set_block_size_limit(1024*1024*1024); // 修改为默认的 1GB
   return obvectorlib::create_index(index_handler,
                                    static_cast<obvectorlib::IndexType>(index_type),
                                    dtype, metric,
