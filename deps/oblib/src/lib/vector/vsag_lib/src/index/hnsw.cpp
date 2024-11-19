@@ -228,7 +228,7 @@ HNSW::knn_search(const DatasetPtr& query,
         CHECK_ARGUMENT(k > 0, fmt::format("k({}) must be greater than 0", k))
         k = std::min(k, GetNumElements());
 
-        std::shared_lock lock(rw_mutex_);
+        // std::shared_lock lock(rw_mutex_);
 
         // check search parameters
         auto params = HnswSearchParameters::FromJson(parameters);
@@ -248,7 +248,7 @@ HNSW::knn_search(const DatasetPtr& query,
 
         // update stats
         {
-            std::lock_guard<std::mutex> lock(stats_mutex_);
+            // std::lock_guard<std::mutex> lock(stats_mutex_);
             result_queues_[STATSTIC_KNN_TIME].Push(time_cost);
         }
 
@@ -261,7 +261,7 @@ HNSW::knn_search(const DatasetPtr& query,
 
         // perform conjugate graph enhancement
         if (use_conjugate_graph_ and params.use_conjugate_graph_search) {
-            std::shared_lock lock(rw_mutex_);
+            // std::shared_lock lock(rw_mutex_);
             time_cost = 0;
             Timer t(time_cost);
 
