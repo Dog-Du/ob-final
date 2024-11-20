@@ -115,6 +115,25 @@ add_subdirectory(demos)
 add_subdirectory(benchs)
 add_subdirectory(tutorial/cpp)
 
+# install
+install (DIRECTORY faiss
+	DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+install (DIRECTORY faiss_sve
+	DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+install (DIRECTORY faiss_avx2
+	DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+install (DIRECTORY faiss_avx512
+	DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+
+install (TARGETS faiss
+	LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}")
+install (TARGETS faiss_avx2
+	LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}")
+install (TARGETS faiss_avx512
+	LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}")
+install (TARGETS faiss_sve
+	LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}")
+
 set(FAISS_BASE_DIR ${CMAKE_BINARY_DIR})
 set(FAISS_LIB_DIR ${VSAG_BASE_DIR}/_deps)
 
