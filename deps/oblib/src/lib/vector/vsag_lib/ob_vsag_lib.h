@@ -12,9 +12,11 @@ typedef void* VectorIndexPtr;
 extern bool is_init_;
 enum IndexType {
   INVALID_INDEX_TYPE = -1,
-  HNSW_TYPE = 0,  // 看来暂时只支持 HNSW，菜。
+  HNSW_TYPE = 0,  // 看来暂时只支持 HNSW。
   MAX_INDEX_TYPE
 };
+
+// 吐槽，为什么vsag库里面有好几个TODO，oceanbase里面也是有几个TODO，
 /**
  *   * Get the version based on git revision
  *     *

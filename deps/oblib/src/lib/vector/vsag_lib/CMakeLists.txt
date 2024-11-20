@@ -263,7 +263,6 @@ if (ENABLE_PYBINDS)
     pybind11_add_module (pyvsag python_bindings/binding.cpp)
     target_link_libraries (pyvsag PRIVATE pybind11::module vsag_test)
 endif ()
-
 # install
 install (DIRECTORY include/
 	DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")

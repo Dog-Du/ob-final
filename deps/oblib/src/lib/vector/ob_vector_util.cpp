@@ -83,6 +83,7 @@ int init_vasg_logger(void* logger)
 bool check_vsag_init()
 {
     INIT_SUCC(ret);
+
 #ifdef OB_BUILD_CDC_DISABLE_VSAG
     return true;
 #else
