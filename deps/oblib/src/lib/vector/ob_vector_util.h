@@ -18,7 +18,7 @@
 #include <vsag/logger.h>
 #include <fstream>
 
-#include <faiss/ob_faiss_lib.h>
+#include "faiss/ob_faiss_lib.h"
 
 namespace oceanbase {
 namespace common {
