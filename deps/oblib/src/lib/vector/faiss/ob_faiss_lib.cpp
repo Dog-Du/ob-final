@@ -6,6 +6,7 @@
 #include "faiss/index_factory.h"
 #include "faiss/index_io.h"
 
+#include <omp.h>
 #include <chrono>
 #include <cstdint>
 #include <fstream>
@@ -193,10 +194,14 @@ int create_index(
     bool is_support = is_supported_index(index_type);
 
     if (is_support) {
+        omp_set_num_threads(6);
         // create index
-        std::shared_ptr<faiss::Index> index(
-                new faiss::IndexHNSWFlat(dim, max_degree, metric_type));
+        std::shared_ptr<faiss::Index> index;
 
+        auto tmp_index = new faiss::IndexHNSWFlat(dim, 8, metric_type);
+        tmp_index->hnsw.efConstruction = 200;
+        tmp_index->hnsw.efSearch = 10;
+        index.reset(tmp_index);
 
         HnswIndexHandler* hnsw_handler = new HnswIndexHandler(
                 true,
@@ -233,6 +238,7 @@ int build_index(
     } catch (...) {
         return static_cast<int>(ErrorType::UNKNOWN_ERROR);
     }
+    hnsw_handler->set_build(true);
     return 0;
 }
 

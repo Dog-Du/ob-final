@@ -12,4 +12,4 @@ time python plot.py --dataset sift-128-euclidean --recompute
 bash ../tools/deploy/obd.sh start -n obcluster cluster restart obcluster
 
 # 运行混合标量查询场景SQL，hybrid_ann.py 位于 ann_benchmarks/algorithms/oceanbase/
-# time python ./ann_benchmarks/algorithms/oceanbase/hybrid_ann.py
+time python ./ann_benchmarks/algorithms/oceanbase/hybrid_ann.py
