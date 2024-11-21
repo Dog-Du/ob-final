@@ -198,9 +198,9 @@ int create_index(
         // create index
         std::shared_ptr<faiss::Index> index;
 
-        auto tmp_index = new faiss::IndexHNSWFlat(dim, 8, metric_type);
+        auto tmp_index = new faiss::IndexHNSWFlat(dim, 4, metric_type);
         tmp_index->hnsw.efConstruction = 200;
-        tmp_index->hnsw.efSearch = 10;
+        tmp_index->hnsw.efSearch = 5;
         index.reset(tmp_index);
 
         HnswIndexHandler* hnsw_handler = new HnswIndexHandler(
