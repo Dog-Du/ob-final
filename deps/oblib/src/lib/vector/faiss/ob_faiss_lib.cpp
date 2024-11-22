@@ -1,6 +1,9 @@
 #include "ob_faiss_lib.h"
 #include "faiss/Index.h"
+#include "faiss/IndexFlat.h"
 #include "faiss/IndexHNSW.h"
+#include "faiss/IndexIVFFlat.h"
+#include "faiss/IndexIVFPQ.h"
 #include "faiss/MetricType.h"
 #include "faiss/impl/io.h"
 #include "faiss/index_factory.h"
@@ -182,6 +185,7 @@ int create_index(
     }
 
     faiss::MetricType metric_type = faiss::MetricType::METRIC_Linf;
+
     if (strcmp(metric, "l2") == 0) {
         metric_type = faiss::METRIC_L2;
     } else if (strcmp(metric, "ip") == 0) {
@@ -198,9 +202,10 @@ int create_index(
         // create index
         std::shared_ptr<faiss::Index> index;
 
-        auto tmp_index = new faiss::IndexHNSWFlat(dim, 4, metric_type);
-        tmp_index->hnsw.efConstruction = 200;
-        tmp_index->hnsw.efSearch = 5;
+        auto tmp_index = new faiss::IndexIVFPQ(
+                new faiss::IndexFlatL2(dim), dim, 16384, 8, 8, metric_type);
+        tmp_index->nprobe = 10;
+
         index.reset(tmp_index);
 
         HnswIndexHandler* hnsw_handler = new HnswIndexHandler(
@@ -234,7 +239,7 @@ int build_index(
     auto& index = hnsw_handler->get_index();
 
     try {
-        index->add_with_ids(size, vector_list, ids);
+        index->train(size, vector_list);
     } catch (...) {
         return static_cast<int>(ErrorType::UNKNOWN_ERROR);
     }

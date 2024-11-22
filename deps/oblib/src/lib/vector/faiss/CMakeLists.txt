@@ -37,7 +37,7 @@ option(FAISS_ENABLE_GPU "Enable support for GPU indexes." OFF)
 option(FAISS_ENABLE_RAFT "Enable RAFT for GPU indexes." OFF)
 option(FAISS_ENABLE_ROCM "Enable ROCm for GPU indexes." OFF)
 option(FAISS_ENABLE_PYTHON "Build Python extension." OFF)
-option(FAISS_ENABLE_C_API "Build C API." ON)
+option(FAISS_ENABLE_C_API "Build C API." OFF)
 option(FAISS_USE_LTO "Enable Link-Time optimization" OFF)
 
 add_subdirectory(faiss)
