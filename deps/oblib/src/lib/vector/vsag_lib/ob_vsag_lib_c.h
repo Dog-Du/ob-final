@@ -17,7 +17,7 @@
 
 
 
-namespace obvectorlib {
+namespace vsag_lib {
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -45,7 +45,7 @@ extern int create_index_c(VectorIndexPtr& index_handler, IndexType index_type,
                         const char* metric,int dim,
                         int max_degree, int ef_construction, int ef_search, void* allocator = NULL);
 
-typedef int (*build_index_ptr)(VectorIndexPtr& index_handler, float* vector_list, int64_t* ids, int dim, int size);              
+typedef int (*build_index_ptr)(VectorIndexPtr& index_handler, float* vector_list, int64_t* ids, int dim, int size);
 extern int build_index_c(VectorIndexPtr& index_handler, float* vector_list, int64_t* ids, int dim, int size);
 
 typedef int (*add_index_ptr)(VectorIndexPtr& index_handler, float* vector, int64_t* ids, int dim, int size);
@@ -61,12 +61,12 @@ extern int knn_search_c(VectorIndexPtr& index_handler,float* query_vector, int d
                       const float*& dist, const int64_t*& ids, int64_t &result_size, int ef_search,
                       void* invalid = NULL);
 
-typedef int (*serialize_ptr)(VectorIndexPtr& index_handler, const std::string dir);          
+typedef int (*serialize_ptr)(VectorIndexPtr& index_handler, const std::string dir);
 extern int serialize_c(VectorIndexPtr& index_handler, const std::string dir);
 
 typedef int (*deserialize_bin_ptr)(VectorIndexPtr& index_handler, const std::string dir);
 extern int deserialize_bin_c(VectorIndexPtr& index_handler, const std::string dir);
- 
+
 typedef int (*delete_index_ptr)(VectorIndexPtr& index_handler);
 extern int delete_index_c(VectorIndexPtr& index_handler);
 

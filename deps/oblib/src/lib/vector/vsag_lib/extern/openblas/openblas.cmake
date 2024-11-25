@@ -7,8 +7,8 @@ ExternalProject_Add(
     URL https://github.com/OpenMathLib/OpenBLAS/releases/download/v0.3.23/OpenBLAS-0.3.23.tar.gz
         # this url is maintained by the vsag project, if it's broken, please try
         #  the latest commit or contact the vsag project
-        http://vsagcache.oss-rg-china-mainland.aliyuncs.com/openblas/OpenBLAS-0.3.23.tar.gz
-    URL_HASH MD5=115634b39007de71eb7e75cf7591dfb2
+       http://vsagcache.oss-rg-china-mainland.aliyuncs.com/openblas/OpenBLAS-0.3.23.tar.gz
+    # URL_HASH MD5=115634b39007de71eb7e75cf7591dfb2
     DOWNLOAD_NAME OpenBLAS-v0.3.23.tar.gz
     PREFIX ${CMAKE_CURRENT_BINARY_DIR}/${name}
     TMP_DIR ${BUILD_INFO_DIR}

@@ -10,6 +10,8 @@
 #include <stdlib.h>
 
 
+#define obvectorlib vsag_lib
+
 int64_t example() {
     std::cout<<"test hnsw_example: "<<std::endl;
     bool is_init = obvectorlib::is_init();
@@ -34,7 +36,7 @@ int64_t example() {
                                                      ef_construction,
                                                      ef_search,
                                                      &default_allocator);
-   
+
     if (ret_create_index!=0) return 333;
     int num_vectors = 10;
     auto ids = new int64_t[num_vectors];
@@ -63,11 +65,11 @@ int64_t example() {
     for (int64_t i = 0; i < inc_num; ++i) {
         ids2[i] = i*2+1;
     }
-    
+
     int ret_add_index = obvectorlib::add_index(index_handler, inc, ids2, dim,inc_num);
     ret_get_element = obvectorlib::get_index_number(index_handler, num_size);
     std::cout<<"after add index, size is "<<num_size<<" " <<ret_add_index<<std::endl;
-    
+
     const float* result_dist;
     const int64_t* result_ids;
     int64_t result_size = 0;
@@ -79,14 +81,14 @@ int64_t example() {
     roaring::api::roaring64_bitmap_add(r1, 1285);
 
     int ret_knn_search = obvectorlib::knn_search(index_handler, vectors+dim*(num_vectors-1), dim, 10,
-                                                 result_dist,result_ids,result_size, 
+                                                 result_dist,result_ids,result_size,
                                                  100, r1);
     const std::string dir = "./";
     int ret_serialize_single = obvectorlib::serialize(index_handler,dir);
-    int ret_deserilize_single_bin = 
+    int ret_deserilize_single_bin =
                     obvectorlib::deserialize_bin(index_handler,dir);
  ret_knn_search = obvectorlib::knn_search(index_handler, vectors+dim*(num_vectors-1), dim, 10,
-                                                 result_dist,result_ids,result_size, 
+                                                 result_dist,result_ids,result_size,
                                                  100, r1);
      obvectorlib::delete_index(index_handler);
     free(test_ptr);
@@ -140,7 +142,7 @@ int example_so() {
         fprintf(stderr, "%s\n", dlerror());
         return EXIT_FAILURE;
     }
-    
+
 
     obvectorlib::set_logger_ptr set_logger_c;
     LOAD_FUNCTION(handle, obvectorlib::set_logger_ptr, set_logger_c);
@@ -194,7 +196,7 @@ int example_so() {
         vectors[i] = distrib_real(rng);
     }
     int ret_build_index = build_index_c(index_handler, vectors, ids, dim, num_vectors);
-    
+
     int64_t num_size = 0;
     int ret_get_element = get_index_number_c(index_handler, num_size);
 
@@ -210,10 +212,10 @@ int example_so() {
     for (int64_t i = 0; i < inc_num; ++i) {
         ids2[i] = num_size+i;
     }
-    
+
     int ret_add_index = add_index_c(index_handler, inc, ids2, dim,inc_num);
     ret_get_element = get_index_number_c(index_handler, num_size);
-    
+
     //knn_search
     obvectorlib::knn_search_ptr knn_search_c;
     LOAD_FUNCTION(handle, obvectorlib::knn_search_ptr, knn_search_c);
@@ -228,7 +230,7 @@ int example_so() {
     roaring::api::roaring64_bitmap_add(r1, 1285);
 
     int ret_knn_search = knn_search_c(index_handler, vectors+dim*(num_vectors-1), dim, 10,
-                                                 result_dist,result_ids,result_size, 
+                                                 result_dist,result_ids,result_size,
                                                  100, r1);
 
     //serialize/deserialize
@@ -243,7 +245,7 @@ int example_so() {
 
     // Clean up
     dlclose(handle);
-    
+
     return 0;
 }
 

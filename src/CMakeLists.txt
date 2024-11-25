@@ -1,3 +1,4 @@
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 add_library(ob_base INTERFACE)
 target_include_directories(
   ob_base INTERFACE

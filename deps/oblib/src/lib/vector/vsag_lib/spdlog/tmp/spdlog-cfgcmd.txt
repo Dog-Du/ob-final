@@ -1,0 +1,1 @@
+cmd='cmake;-DCMAKE_INSTALL_PREFIX=/home/user/oceanbase-2024/oceanbase/deps/oblib/src/lib/vector/vsag_lib/spdlog/install;-S.;-Bbuild'

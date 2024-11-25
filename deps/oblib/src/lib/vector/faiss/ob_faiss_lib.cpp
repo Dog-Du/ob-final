@@ -1,19 +1,12 @@
 #include "ob_faiss_lib.h"
-#include "faiss/Index.h"
-#include "faiss/IndexFlat.h"
-#include "faiss/IndexHNSW.h"
-#include "faiss/IndexIVFFlat.h"
-#include "faiss/IndexIVFPQ.h"
-#include "faiss/MetricType.h"
-#include "faiss/impl/io.h"
-#include "faiss/index_factory.h"
-#include "faiss/index_io.h"
 
 #include <omp.h>
 #include <chrono>
 #include <cstdint>
+#include <cstring>
 #include <fstream>
 #include <functional>
+#include <memory>
 
 namespace obvectorlib {
 
@@ -144,6 +137,10 @@ class HnswIndexHandler {
     std::shared_ptr<faiss::Index> index_;
 };
 
+int64_t example() {
+    return 0;
+}
+
 void set_log_level(int64_t level_num) {
     return;
 }
@@ -198,13 +195,13 @@ int create_index(
     bool is_support = is_supported_index(index_type);
 
     if (is_support) {
-        omp_set_num_threads(6);
+        omp_set_num_threads(16);
         // create index
         std::shared_ptr<faiss::Index> index;
 
-        auto tmp_index = new faiss::IndexIVFPQ(
-                new faiss::IndexFlatL2(dim), dim, 16384, 8, 8, metric_type);
-        tmp_index->nprobe = 10;
+        auto tmp_index = new faiss::IndexHNSWFlat(dim, 8, metric_type);
+        tmp_index->hnsw.efConstruction = 300;
+        tmp_index->hnsw.efSearch = 10;
 
         index.reset(tmp_index);
 
@@ -322,9 +319,7 @@ int serialize(VectorIndexPtr& index_handler, const std::string dir) {
     return 0;
 }
 
-extern int deserialize_bin(
-        VectorIndexPtr& index_handler,
-        const std::string dir) {
+int deserialize_bin(VectorIndexPtr& index_handler, const std::string dir) {
     HnswIndexHandler* hnsw_handler =
             static_cast<HnswIndexHandler*>(index_handler);
     auto& index = hnsw_handler->get_index();

@@ -14,6 +14,8 @@
 #define USER_THREAD_H
 
 #include <functional>
+#include <omp.h>
+#include <pthread.h>
 #include "lib/ob_errno.h"
 #include "lib/thread/thread.h"
 #include "lib/utility/ob_macro_utils.h"

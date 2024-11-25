@@ -1,6 +1,7 @@
+add_subdirectory(vector)
 add_subdirectory(compress)
 add_subdirectory(restore)
-add_subdirectory(vector)
+
 ob_set_subtarget(oblib_lib ALONE
   timezone/ob_timezone_util.cpp
   geo/ob_geo_func_difference.cpp
@@ -418,12 +419,16 @@ target_link_libraries(oblib_lib
 if (NOT OB_BUILD_CDC)
 # vsag vector library
 target_link_directories(
-  oblib_lib PUBLIC 
-  ${DEP_DIR}/lib ${DEP_DIR}/lib/vsag_lib
-  ${CMAKE_BINARY_DIR}/deps/oblib/src/lib/vector/vsag_lib 
-  ${CMAKE_BINARY_DIR}/deps/oblib/src/lib//vector/vsag_lib/src
+  oblib_lib PUBLIC
+  ${DEP_DIR}/lib ${DEP_DIR}/lib/vsag_lib ${DEP_DIR}/lib/faiss ${DEP_DIR}/lib/faiss/faiss
+  ${CMAKE_BINARY_DIR}/deps/oblib/src/lib/vector/vsag_lib
+  ${CMAKE_BINARY_DIR}/deps/oblib/src/lib/vector/faiss
+  ${CMAKE_BINARY_DIR}/deps/oblib/src/lib/vector/vsag_lib/src
+  ${CMAKE_BINARY_DIR}/deps/oblib/src/lib/vector/faiss/faiss
+  ${CMAKE_BINARY_DIR}/deps/oblib/src/lib/vector/faiss/c_api
   ${CMAKE_BINARY_DIR}/_deps/fmt-build
 )
+
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
 set(FMT_STATIC "")
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -436,6 +441,14 @@ if(CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
 if (NOT OB_BUILD_VSAG_RPM)
   target_link_libraries(oblib_lib
     PUBLIC
+
+    # libfaiss_c.a
+
+    # libfaiss_avx512.a
+    # libfaiss_avx2.a
+    # libfaiss.a
+    libfaiss_lib.a
+
     libob_vsag_static_test.a
     libcpuinfo.a
     libsimd.a
@@ -445,12 +458,22 @@ if (NOT OB_BUILD_VSAG_RPM)
     libgfortran_static.a
     libquadmath_static.a
     libgomp_static.a
+    libgomp.a
+    # libomp.a
     libroaring.a
     ${FMT_STATIC}
   )
+  # target_link_libraries(oblib_lib PUBLIC faiss_lib ${OpenMP_gomp_LIBRARY})
 else()
   target_link_libraries(oblib_lib
     PUBLIC
+    # libfaiss_c.a
+
+    # libfaiss_avx512.a
+    # libfaiss_avx2.a
+    # libfaiss.a
+    libfaiss_lib.a
+
     libob_vsag_static.a
     libcpuinfo.a
     libsimd.a
@@ -460,13 +483,23 @@ else()
     libgfortran_static.a
     libquadmath_static.a
     libgomp_static.a
+    libgomp.a
+    # libomp.a
     libroaring.a
     ${FMT_STATIC}
   )
+  # target_link_libraries(oblib_lib PUBLIC faiss_lib ${OpenMP_gomp_LIBRARY})
 endif()
 elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
   target_link_libraries(oblib_lib
     PUBLIC
+
+    # libfaiss_c.a
+    # libfaiss_avx512.a
+    # libfaiss_avx2.a
+    # libfaiss.a
+    libfaiss_lib.a
+
     libob_vsag_static_test.a
     libcpuinfo.a
     libsimd.a
@@ -475,10 +508,15 @@ elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
     libopenblas.a
     libgfortran_static.a
     libgomp_static.a
+    libgomp.a
+    # libomp.a
     libroaring.a
   )
+  # target_link_libraries(oblib_lib PUBLIC faiss_lib ${OpenMP_gomp_LIBRARY})
 else()
     message(FATAL_ERROR "Unsupported architecture: ${CMAKE_SYSTEM_PROCESSOR}")
 endif()
 
 endif()
+
+add_dependencies(oblib_lib faiss)

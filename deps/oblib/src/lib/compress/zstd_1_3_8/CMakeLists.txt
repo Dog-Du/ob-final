@@ -1,3 +1,5 @@
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 add_library(zstd_1_3_8_objs OBJECT
   zstd_src/bitstream.h
   zstd_src/compiler.h
@@ -55,6 +57,7 @@ add_library(zstd_1_3_8_objs OBJECT
 
 target_compile_definitions(zstd_1_3_8_objs PRIVATE -DZSTDERRORLIB_VISIBILITY= -DZDICTLIB_VISIBILITY= -DZSTDLIB_VISIBILITY=)
 target_compile_options(zstd_1_3_8_objs PRIVATE -fvisibility=hidden)
+# target_link_options(zstd_1_3_8_objs PRIVATE -Wl,-z,notext)
 target_link_libraries(zstd_1_3_8_objs PUBLIC oblib_base_base)
 
 add_custom_command(

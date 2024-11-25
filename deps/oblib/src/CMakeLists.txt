@@ -1,3 +1,5 @@
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 add_library(oblib_base_base INTERFACE)
 add_library(oblib_base_base_base INTERFACE)
 
@@ -152,7 +154,7 @@ else()
     -fno-strict-aliasing -fno-omit-frame-pointer ${MARCH_CFLAGS} ${MTUNE_CFLAGS}
     -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -D_NO_EXCEPTION
     -DOCI_LINK_RUNTIME
-    -Wall -Wextra -Wformat -Werror
+    -Wall -Wextra -Wformat -Werror -fopenmp
     -Wno-deprecated
     -Wno-sign-compare
     -Wno-psabi

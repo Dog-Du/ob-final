@@ -14,6 +14,7 @@
 #define OCEANBASE_COMMON_THREAD_BUFFER_
 
 #include <pthread.h>
+#include <omp.h>
 #include "lib/ob_define.h"
 
 namespace oceanbase

@@ -62,3 +62,5 @@ if(FAISS_ENABLE_GPU)
     add_subdirectory(gpu)
   endif()
 endif()
+
+# add_dependencies(faiss_c openblas)

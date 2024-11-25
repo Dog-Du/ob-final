@@ -170,7 +170,7 @@ if (NOT NUM_BUILDING_JOBS)
   set (NUM_BUILDING_JOBS 4)
 endif ()
 
-# thirdparties of lib
+# # thirdparties of lib
 include (cmake/CheckSIMDCompilerFlag.cmake)
 include (ExternalProject)
 include (extern/json/json.cmake)

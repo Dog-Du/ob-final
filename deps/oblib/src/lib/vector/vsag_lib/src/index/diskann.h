@@ -19,7 +19,6 @@
 #include <abstract_index.h>
 #include <disk_utils.h>
 #include <index.h>
-#include <omp.h>
 #include <pq_flash_index.h>
 
 #include <functional>
