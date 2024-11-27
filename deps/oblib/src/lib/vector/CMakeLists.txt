@@ -12,17 +12,17 @@ set(tmp_cxx_link_flags ${CMAKE_CXX_LINK_FLAGS})
 set(tmp_shared_link_flags ${CMAKE_SHARED_LINKER_FLAGS})
 set(tmp_exe_link_flags ${CMAKE_EXE_LINKER_FLAGS})
 
-set(CMAKE_C_COMPILER "/usr/bin/gcc")
-set(CMAKE_CXX_COMPILER "/usr/bin/g++")
-set(CMAKE_C_FLAGS "-fopenmp -O3")
-set(CMAKE_CXX_FLAGS "-fopenmp -O3")
+message(STATUS "DEVTOOLS_DIR : ${DEVTOOLS_DIR}")
+set(CMAKE_C_COMPILER "${DEVTOOLS_DIR}/bin/gcc")
+set(CMAKE_CXX_COMPILER "${DEVTOOLS_DIR}/bin/g++")
+set(CMAKE_C_FLAGS "-fopenmp -Og")
+set(CMAKE_CXX_FLAGS "-fopenmp -Og")
 set(CMAKE_SHARED_LINKER_FLAGS "-Wl,-z,noexecstack")
 set(CMAKE_EXE_LINKER_FLAGS "-Wl,-z,noexecstack")
 
-
 add_subdirectory (faiss)
 
-
+add_dependencies(faiss_lib ob_vsag_test)
 # add_executable(faiss_vector_test_test faiss_test.cpp)
 # target_link_libraries(faiss_vector_test_test PRIVATE faiss_lib)
 # add_dependencies(faiss_vector_test_test faiss_lib)

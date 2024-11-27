@@ -1,14 +1,16 @@
 #include "ob_faiss_lib.h"
-#include <omp.h>
 #include <faiss/Index.h>
 #include <faiss/IndexFlat.h>
 #include <faiss/IndexHNSW.h>
+#include <faiss/IndexIDMap.h>
 #include <faiss/IndexIVFFlat.h>
 #include <faiss/IndexIVFPQ.h>
 #include <faiss/MetricType.h>
 #include <faiss/impl/io.h>
 #include <faiss/index_factory.h>
 #include <faiss/index_io.h>
+#include <linux/limits.h>
+#include <omp.h>
 
 #include <omp.h>
 #include <chrono>
@@ -86,7 +88,8 @@ class HnswIndexHandler {
             int ef_construction,
             int ef_search,
             int dim,
-            std::shared_ptr<faiss::Index> index)
+            std::shared_ptr<faiss::Index> index,
+            std::shared_ptr<faiss::IndexIDMap> ix_id_map)
             : is_created_(is_create),
               is_build_(is_build),
               use_static_(use_static),
@@ -94,7 +97,8 @@ class HnswIndexHandler {
               ef_construction_(ef_construction),
               ef_search_(ef_search),
               dim_(dim),
-              index_(index) {}
+              index_(index),
+              ix_id_map_(ix_id_map) {}
 
     ~HnswIndexHandler() {
         index_ = nullptr;
@@ -106,7 +110,7 @@ class HnswIndexHandler {
         return is_build_;
     }
     // int build_index(const vsag::DatasetPtr& base);
-    int get_index_number() {
+    inline int get_index_number() {
         return static_cast<int>(index_->ntotal);
     }
     // int add_index(const vsag::DatasetPtr& incremental);
@@ -114,10 +118,13 @@ class HnswIndexHandler {
     //               const std::string& parameters,
     //               const float*& dist, const int64_t*& ids, int64_t
     //               &result_size, const std::function<bool(int64_t)>& filter);
-    std::shared_ptr<faiss::Index>& get_index() {
-        return index_;
+    inline std::shared_ptr<faiss::IndexIDMap>& get_index() {
+        return ix_id_map_;
     }
-    void set_index(std::shared_ptr<faiss::Index> hnsw) {
+    // inline std::shared_ptr<faiss::Index>& get_index() {
+    //     return index_;
+    // }
+    inline void set_index(std::shared_ptr<faiss::Index> hnsw) {
         index_ = hnsw;
     }
     inline bool get_use_static() {
@@ -145,6 +152,7 @@ class HnswIndexHandler {
     int ef_search_;
     int dim_;
     std::shared_ptr<faiss::Index> index_;
+    std::shared_ptr<faiss::IndexIDMap> ix_id_map_;
 };
 
 int64_t example() {
@@ -191,6 +199,10 @@ int create_index(
         return static_cast<int>(ErrorType::INVALID_ARGUMENT);
     }
 
+    printf("[FAISS][DEBUG] create_index ::: dtype : %s, metric : %s, dim : %d\n",
+           dtype,
+           metric,
+           dim);
     faiss::MetricType metric_type = faiss::MetricType::METRIC_Linf;
 
     if (strcmp(metric, "l2") == 0) {
@@ -208,12 +220,16 @@ int create_index(
         omp_set_num_threads(16);
         // create index
         std::shared_ptr<faiss::Index> index;
+        std::shared_ptr<faiss::IndexIDMap> ix_id_map;
 
         auto tmp_index = new faiss::IndexHNSWFlat(dim, 8, metric_type);
         tmp_index->hnsw.efConstruction = 300;
         tmp_index->hnsw.efSearch = 10;
+        tmp_index->is_trained = true;
 
         index.reset(tmp_index);
+        ix_id_map.reset(new faiss::IndexIDMap(index.get()));
+        ix_id_map->is_trained = true;
 
         HnswIndexHandler* hnsw_handler = new HnswIndexHandler(
                 true,
@@ -223,7 +239,8 @@ int create_index(
                 ef_construction,
                 ef_search,
                 dim,
-                index);
+                index,
+                ix_id_map);
 
         index_handler = static_cast<VectorIndexPtr>(hnsw_handler);
         return 0;
@@ -241,12 +258,17 @@ int build_index(
         int64_t* ids,
         int dim,
         int size) {
+    printf("[FAISS][DEBUG] create_index ::: dim : %d, size : %d\n", dim, size);
     HnswIndexHandler* hnsw_handler =
             static_cast<HnswIndexHandler*>(index_handler);
     auto& index = hnsw_handler->get_index();
 
     try {
-        index->train(size, vector_list);
+        if (!index->is_trained) {
+            index->train(size, vector_list);
+            index->is_trained = true;
+        }
+        index->add_with_ids(size, vector_list, ids);
     } catch (...) {
         return static_cast<int>(ErrorType::UNKNOWN_ERROR);
     }
@@ -336,7 +358,8 @@ int deserialize_bin(VectorIndexPtr& index_handler, const std::string dir) {
     std::string file_name = dir + "hnsw.data";
 
     try {
-        index.reset(faiss::read_index(file_name.c_str()));
+        index.reset(
+                new faiss::IndexIDMap(faiss::read_index(file_name.c_str())));
     } catch (...) {
         return static_cast<int>(ErrorType::UNKNOWN_ERROR);
     }
@@ -364,7 +387,7 @@ int fdeserialize(VectorIndexPtr& index_handler, std::istream& in_stream) {
     StreamReader reader(in_stream);
 
     try {
-        index.reset(faiss::read_index(&reader));
+        index.reset(new faiss::IndexIDMap(faiss::read_index(&reader)));
     } catch (...) {
         return static_cast<int>(ErrorType::UNKNOWN_ERROR);
     }
