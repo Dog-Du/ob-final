@@ -2,6 +2,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 add_library(oblib_base_base INTERFACE)
 add_library(oblib_base_base_base INTERFACE)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
 
 get_property(EASY_INCLUDE_DIRS GLOBAL PROPERTY "EASY_INCLUDE_DIRS" )
 

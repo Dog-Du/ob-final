@@ -1,4 +1,14 @@
 #include "ob_faiss_lib.h"
+#include <omp.h>
+#include <faiss/Index.h>
+#include <faiss/IndexFlat.h>
+#include <faiss/IndexHNSW.h>
+#include <faiss/IndexIVFFlat.h>
+#include <faiss/IndexIVFPQ.h>
+#include <faiss/MetricType.h>
+#include <faiss/impl/io.h>
+#include <faiss/index_factory.h>
+#include <faiss/index_io.h>
 
 #include <omp.h>
 #include <chrono>

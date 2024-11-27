@@ -1,10 +1,16 @@
 #include "faiss/ob_faiss_lib.h"
 #include <cstdint>
 #include <iostream>
+#include <omp.h>
 #include <ostream>
 #include <sstream>
 
 int main() {
+  std::cout << omp_get_max_threads() << std::endl
+            << omp_get_num_threads() << std::endl
+            << omp_get_thread_num() << std::endl
+            << omp_get_thread_limit() << std::endl
+            << omp_get_wtime() << std::endl;
   std::cout << obvectorlib::version() << std::endl;
   obvectorlib::VectorIndexPtr index_ptr = nullptr;
   std::cout << obvectorlib::create_index(index_ptr,

@@ -1,7 +1,6 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
-# All rights reserved.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
 #
-# This source code is licensed under the BSD-style license found in the
+# This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
 set(FAISS_SRC
@@ -126,6 +125,7 @@ set(FAISS_HEADERS
   IndexIVFPQR.h
   IndexIVFSpectralHash.h
   IndexLSH.h
+  IndexNeuralNetCodec.h
   IndexLattice.h
   IndexNNDescent.h
   IndexNSG.h
@@ -169,6 +169,7 @@ set(FAISS_HEADERS
   impl/ScalarQuantizer.h
   impl/ThreadedIndex-inl.h
   impl/ThreadedIndex.h
+  impl/index_read_utils.h
   impl/io.h
   impl/io_macros.h
   impl/kmeans1d.h
@@ -180,13 +181,17 @@ set(FAISS_HEADERS
   impl/code_distance/code_distance.h
   impl/code_distance/code_distance-generic.h
   impl/code_distance/code_distance-avx2.h
+  impl/code_distance/code_distance-avx512.h
+  impl/code_distance/code_distance-sve.h
   invlists/BlockInvertedLists.h
   invlists/DirectMap.h
   invlists/InvertedLists.h
   invlists/InvertedListsIOHook.h
+  invlists/OnDiskInvertedLists.h
   utils/AlignedTable.h
   utils/bf16.h
   utils/Heap.h
+  utils/NeuralNet.h
   utils/WorkerThread.h
   utils/distances.h
   utils/extra_distances-inl.h
@@ -205,8 +210,10 @@ set(FAISS_HEADERS
   utils/sorting.h
   utils/simdlib.h
   utils/simdlib_avx2.h
+  utils/simdlib_avx512.h
   utils/simdlib_emulated.h
   utils/simdlib_neon.h
+  utils/simdlib_ppc64.h
   utils/utils.h
   utils/distances_fused/avx512.h
   utils/distances_fused/distances_fused.h
@@ -217,6 +224,7 @@ set(FAISS_HEADERS
   utils/approx_topk/mode.h
   utils/approx_topk_hamming/approx_topk_hamming.h
   utils/transpose/transpose-avx2-inl.h
+  utils/transpose/transpose-avx512-inl.h
   utils/hamming_distance/common.h
   utils/hamming_distance/generic-inl.h
   utils/hamming_distance/hamdis-inl.h
@@ -302,19 +310,7 @@ target_include_directories(faiss_avx512 PUBLIC
 target_include_directories(faiss_sve PUBLIC
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>)
 
-set_target_properties(faiss PROPERTIES
-  POSITION_INDEPENDENT_CODE ON
-  WINDOWS_EXPORT_ALL_SYMBOLS ON
-)
-set_target_properties(faiss_avx2 PROPERTIES
-  POSITION_INDEPENDENT_CODE ON
-  WINDOWS_EXPORT_ALL_SYMBOLS ON
-)
-set_target_properties(faiss_avx512 PROPERTIES
-  POSITION_INDEPENDENT_CODE ON
-  WINDOWS_EXPORT_ALL_SYMBOLS ON
-)
-set_target_properties(faiss_sve PROPERTIES
+set_target_properties(faiss faiss_avx2 faiss_avx512 faiss_sve PROPERTIES
   POSITION_INDEPENDENT_CODE ON
   WINDOWS_EXPORT_ALL_SYMBOLS ON
 )
@@ -348,18 +344,14 @@ if(FAISS_USE_LTO)
   endif()
 endif()
 
+set(OpenMP_gomp_LIBRARY "-fopenmp")
+set(OpenMP_CXX_FLAGS "-fopenmp")
+set(OpenMP_CXX_LIB_NAMES "omp")
 find_package(OpenMP REQUIRED)
-# set(OpenMP_CXX_FLAGS "${OpenMP_CXX_FLAGS} -fopenmp")
-set(OpenMP_gomp_LIBRARY "-Wl,-Bstatic -lgomp -Wl,-Bdynamic")
 target_link_libraries(faiss PRIVATE OpenMP::OpenMP_CXX)
 target_link_libraries(faiss_avx2 PRIVATE OpenMP::OpenMP_CXX)
 target_link_libraries(faiss_avx512 PRIVATE OpenMP::OpenMP_CXX)
 target_link_libraries(faiss_sve PRIVATE OpenMP::OpenMP_CXX)
-
-target_link_libraries(faiss PRIVATE ${OpenMP_gomp_LIBRARY})
-target_link_libraries(faiss_avx2 PRIVATE ${OpenMP_gomp_LIBRARY})
-target_link_libraries(faiss_avx512 PRIVATE ${OpenMP_gomp_LIBRARY})
-target_link_libraries(faiss_sve PRIVATE ${OpenMP_gomp_LIBRARY})
 
 find_package(MKL)
 if(MKL_FOUND)

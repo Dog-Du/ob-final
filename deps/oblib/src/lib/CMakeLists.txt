@@ -1,3 +1,4 @@
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
 add_subdirectory(vector)
 add_subdirectory(compress)
 add_subdirectory(restore)
@@ -429,7 +430,6 @@ target_link_directories(
   ${CMAKE_BINARY_DIR}/_deps/fmt-build
 )
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
 set(FMT_STATIC "")
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
   set(FMT_STATIC "libfmtd.a")
@@ -444,7 +444,7 @@ if (NOT OB_BUILD_VSAG_RPM)
 
     # libfaiss_c.a
 
-    # libfaiss_avx512.a
+    libfaiss_avx512.a
     # libfaiss_avx2.a
     # libfaiss.a
     libfaiss_lib.a
@@ -462,14 +462,15 @@ if (NOT OB_BUILD_VSAG_RPM)
     # libomp.a
     libroaring.a
     ${FMT_STATIC}
+
   )
-  # target_link_libraries(oblib_lib PUBLIC faiss_lib ${OpenMP_gomp_LIBRARY})
+  target_link_libraries(oblib_lib PUBLIC ${OpenMP_gomp_LIBRARY})
 else()
   target_link_libraries(oblib_lib
     PUBLIC
     # libfaiss_c.a
 
-    # libfaiss_avx512.a
+    libfaiss_avx512.a
     # libfaiss_avx2.a
     # libfaiss.a
     libfaiss_lib.a
@@ -488,14 +489,14 @@ else()
     libroaring.a
     ${FMT_STATIC}
   )
-  # target_link_libraries(oblib_lib PUBLIC faiss_lib ${OpenMP_gomp_LIBRARY})
+  target_link_libraries(oblib_lib PUBLIC ${OpenMP_gomp_LIBRARY})
 endif()
 elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
   target_link_libraries(oblib_lib
     PUBLIC
 
     # libfaiss_c.a
-    # libfaiss_avx512.a
+    libfaiss_avx512.a
     # libfaiss_avx2.a
     # libfaiss.a
     libfaiss_lib.a
@@ -512,7 +513,7 @@ elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
     # libomp.a
     libroaring.a
   )
-  # target_link_libraries(oblib_lib PUBLIC faiss_lib ${OpenMP_gomp_LIBRARY})
+  target_link_libraries(oblib_lib PUBLIC ${OpenMP_gomp_LIBRARY})
 else()
     message(FATAL_ERROR "Unsupported architecture: ${CMAKE_SYSTEM_PROCESSOR}")
 endif()
@@ -520,3 +521,5 @@ endif()
 endif()
 
 add_dependencies(oblib_lib faiss)
+add_dependencies(oblib_lib faiss_avx512)
+add_dependencies(oblib_lib faiss_lib)

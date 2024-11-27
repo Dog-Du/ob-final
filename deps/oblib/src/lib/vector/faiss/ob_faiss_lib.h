@@ -4,16 +4,7 @@
 #include <stdint.h>
 #include <iostream>
 #include <map>
-#include <omp.h>
-#include <faiss/Index.h>
-#include <faiss/IndexFlat.h>
-#include <faiss/IndexHNSW.h>
-#include <faiss/IndexIVFFlat.h>
-#include <faiss/IndexIVFPQ.h>
-#include <faiss/MetricType.h>
-#include <faiss/impl/io.h>
-#include <faiss/index_factory.h>
-#include <faiss/index_io.h>
+
 
 namespace obvectorlib {
 
