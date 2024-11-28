@@ -7,11 +7,11 @@ set (FMT_SYSTEM_HEADERS ON)
 
 FetchContent_Declare(
     fmt
-    URL /home/user/oceanbase-2024/fmt-10.2.1.tar.gz
-        #https://github.com/fmtlib/fmt/archive/refs/tags/10.2.1.tar.gz
+    URL # /home/user/oceanbase-2024/fmt-10.2.1.tar.gz
+        https://github.com/fmtlib/fmt/archive/refs/tags/10.2.1.tar.gz
         # this url is maintained by the vsag project, if it's broken, please try
         #  the latest commit or contact the vsag project
-       #http://vsagcache.oss-rg-china-mainland.aliyuncs.com/fmt/10.2.1.tar.gz
+        http://vsagcache.oss-rg-china-mainland.aliyuncs.com/fmt/10.2.1.tar.gz
     # URL_HASH MD5=dc09168c94f90ea890257995f2c497a5
     DOWNLOAD_NO_PROGRESS 1
     INACTIVITY_TIMEOUT 5
