@@ -1708,7 +1708,7 @@ int ObTabletDirectLoadMgr::fill_sstable_slice(
       sqc_build_ctx_.storage_schema_->get_index_type());
 
   LOG_INFO("[vec index debug] : ", K(is_vector_data_complement));
-  
+
   bool is_index_com;
   if (OB_UNLIKELY(!is_inited_)) {
     ret = OB_NOT_INIT;
@@ -1744,14 +1744,13 @@ int ObTabletDirectLoadMgr::fill_sstable_slice(
       ret = OB_ERR_UNEXPECTED;
       LOG_WARN("unexpected err", K(ret), K(slice_info),
                K(is_schema_item_ready_));
-    } else if (is_vector_data_complement &&
+    } else if (false && is_vector_data_complement &&
                OB_FAIL(slice_writer->fill_vector_index_data(
                    sqc_build_ctx_.build_param_.common_param_.read_snapshot_,
                    sqc_build_ctx_.storage_schema_, start_scn,
                    schema_item_.lob_inrow_threshold_, insert_monitor))) {
       LOG_INFO("fill vector index data failed.", K(ret), KPC(this));
-    } else if (!is_vector_data_complement &&
-               OB_FAIL(slice_writer->fill_sstable_slice(
+    } else if (OB_FAIL(slice_writer->fill_sstable_slice(
                    start_scn,
                    sqc_build_ctx_.build_param_.runtime_only_param_.table_id_,
                    tablet_id_, sqc_build_ctx_.storage_schema_, iter,

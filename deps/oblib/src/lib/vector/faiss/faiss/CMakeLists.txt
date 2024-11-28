@@ -344,6 +344,7 @@ if(FAISS_USE_LTO)
   endif()
 endif()
 
+set(OpenMP_omp_LIBRARY "-fopenmp")
 set(OpenMP_gomp_LIBRARY "-fopenmp")
 set(OpenMP_CXX_FLAGS "-fopenmp")
 set(OpenMP_CXX_LIB_NAMES "omp")

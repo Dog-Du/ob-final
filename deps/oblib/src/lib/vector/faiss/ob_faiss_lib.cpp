@@ -19,6 +19,7 @@
 #include <fstream>
 #include <functional>
 #include <memory>
+#include "faiss/impl/FaissException.h"
 
 namespace obvectorlib {
 
@@ -55,7 +56,7 @@ class StreamWriter : public faiss::IOWriter {
     size_t operator()(const void* ptr, size_t size, size_t nitems) override {
         size_t total_size = size * nitems;
         out_stream_.write(static_cast<const char*>(ptr), total_size);
-        return total_size;
+        return nitems;
     }
 
    private:
@@ -69,7 +70,7 @@ class StreamReader : public faiss::IOReader {
     size_t operator()(void* ptr, size_t size, size_t nitems) override {
         size_t total_size = size * nitems;
         in_stream_.read(static_cast<char*>(ptr), total_size);
-        return in_stream_.gcount(); // 返回实际读取的字节数
+        return in_stream_.gcount() / size;
     }
 
    private:
@@ -382,7 +383,8 @@ int fserialize(VectorIndexPtr& index_handler, std::ostream& out_stream) {
     int ret = 0;
     try {
         faiss::write_index(index.get(), &writer);
-    } catch (...) {
+    } catch (faiss::FaissException& e) {
+        std::cout << e.what() << std::endl;
         ret = static_cast<int>(ErrorType::UNKNOWN_ERROR);
     }
     return ret;
@@ -397,7 +399,8 @@ int fdeserialize(VectorIndexPtr& index_handler, std::istream& in_stream) {
     int ret = 0;
     try {
         index.reset(new faiss::IndexIDMap(faiss::read_index(&reader)));
-    } catch (...) {
+    } catch (faiss::FaissException& e) {
+        std::cout << e.what() << std::endl;
         ret = static_cast<int>(ErrorType::UNKNOWN_ERROR);
     }
     return ret;
