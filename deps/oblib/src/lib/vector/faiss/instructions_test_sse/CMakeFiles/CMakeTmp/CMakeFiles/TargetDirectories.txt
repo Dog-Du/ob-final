@@ -1,0 +1,3 @@
+/home/user/oceanbase-2024/oceanbase/deps/oblib/src/lib/vector/faiss/instructions_test_sse/CMakeFiles/CMakeTmp/CMakeFiles/cmTC_64247.dir
+/home/user/oceanbase-2024/oceanbase/deps/oblib/src/lib/vector/faiss/instructions_test_sse/CMakeFiles/CMakeTmp/CMakeFiles/edit_cache.dir
+/home/user/oceanbase-2024/oceanbase/deps/oblib/src/lib/vector/faiss/instructions_test_sse/CMakeFiles/CMakeTmp/CMakeFiles/rebuild_cache.dir
