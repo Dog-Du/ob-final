@@ -193,7 +193,6 @@ int create_index(
         int ef_construction,
         int ef_search,
         void* allocator) {
-    ErrorType error = ErrorType::UNKNOWN_ERROR;
     int ret = 0;
     if (dtype == nullptr || metric == nullptr) {
         return static_cast<int>(ErrorType::INVALID_ARGUMENT);
@@ -210,19 +209,23 @@ int create_index(
     } else if (strcmp(metric, "ip") == 0) {
         metric_type = faiss::METRIC_INNER_PRODUCT;
     } else {
-        error = ErrorType::INVALID_ARGUMENT;
-        return static_cast<int>(error);
+        ret = static_cast<int>(ErrorType::INVALID_ARGUMENT);
+    }
+
+    if (ret != 0) {
+        return ret;
     }
 
     bool is_support = is_supported_index(index_type);
 
     if (is_support) {
-        omp_set_num_threads(16);
+        omp_set_num_threads(10);
         // create index
         std::shared_ptr<faiss::Index> index;
         std::shared_ptr<faiss::IndexIDMap> ix_id_map;
 
         auto tmp_index = new faiss::IndexHNSWFlat(dim, 8, metric_type);
+
         tmp_index->hnsw.efConstruction = 300;
         tmp_index->hnsw.efSearch = 10;
         tmp_index->is_trained = true;
@@ -243,11 +246,9 @@ int create_index(
                 ix_id_map);
 
         index_handler = static_cast<VectorIndexPtr>(hnsw_handler);
-        return 0;
     } else {
-        error = ErrorType::UNSUPPORTED_INDEX;
+        ret = static_cast<int>(ErrorType::UNSUPPORTED_INDEX);
     }
-    ret = static_cast<int>(error);
 
     return ret;
 }
@@ -263,6 +264,7 @@ int build_index(
             static_cast<HnswIndexHandler*>(index_handler);
     auto& index = hnsw_handler->get_index();
 
+    int ret = 0;
     try {
         if (!index->is_trained) {
             index->train(size, vector_list);
@@ -270,10 +272,10 @@ int build_index(
         }
         index->add_with_ids(size, vector_list, ids);
     } catch (...) {
-        return static_cast<int>(ErrorType::UNKNOWN_ERROR);
+        ret = static_cast<int>(ErrorType::UNKNOWN_ERROR);
     }
     hnsw_handler->set_build(true);
-    return 0;
+    return ret;
 }
 
 int add_index(
@@ -285,19 +287,18 @@ int add_index(
     HnswIndexHandler* hnsw_handler =
             static_cast<HnswIndexHandler*>(index_handler);
     auto& index = hnsw_handler->get_index();
-
+    int ret = 0;
     try {
         index->add_with_ids(size, vector, ids);
     } catch (...) {
-        return static_cast<int>(ErrorType::UNKNOWN_ERROR);
+        ret = static_cast<int>(ErrorType::UNKNOWN_ERROR);
     }
-    return 0;
+    return ret;
 }
 
 int get_index_number(VectorIndexPtr& index_handler, int64_t& size) {
-    ErrorType error = ErrorType::UNKNOWN_ERROR;
     if (index_handler == nullptr) {
-        return static_cast<int>(error);
+        return static_cast<int>(ErrorType::UNKNOWN_ERROR);
     }
     HnswIndexHandler* hnsw = static_cast<HnswIndexHandler*>(index_handler);
     size = hnsw->get_index_number();
@@ -318,6 +319,7 @@ int knn_search(
             static_cast<HnswIndexHandler*>(index_handler);
     auto& index = hnsw_handler->get_index();
 
+    int ret = 0;
     try {
         index->search(
                 1,
@@ -326,7 +328,11 @@ int knn_search(
                 const_cast<float*&>(dist),
                 const_cast<int64_t*&>(ids));
     } catch (...) {
-        return static_cast<int>(ErrorType::UNKNOWN_ERROR);
+        ret = static_cast<int>(ErrorType::UNKNOWN_ERROR);
+    }
+
+    if (ret != 0) {
+        return ret;
     }
 
     for (int i = topk - 1; i >= 0; --i) {
@@ -335,7 +341,7 @@ int knn_search(
         }
     }
 
-    return 0;
+    return ret;
 }
 
 int serialize(VectorIndexPtr& index_handler, const std::string dir) {
@@ -343,12 +349,13 @@ int serialize(VectorIndexPtr& index_handler, const std::string dir) {
             static_cast<HnswIndexHandler*>(index_handler);
     auto& index = hnsw_handler->get_index();
     std::string file_name = dir + "hnsw.data";
+    int ret = 0;
     try {
         faiss::write_index(index.get(), file_name.c_str());
     } catch (...) {
-        return static_cast<int>(ErrorType::UNKNOWN_ERROR);
+        ret = static_cast<int>(ErrorType::UNKNOWN_ERROR);
     }
-    return 0;
+    return ret;
 }
 
 int deserialize_bin(VectorIndexPtr& index_handler, const std::string dir) {
@@ -357,13 +364,14 @@ int deserialize_bin(VectorIndexPtr& index_handler, const std::string dir) {
     auto& index = hnsw_handler->get_index();
     std::string file_name = dir + "hnsw.data";
 
+    int ret = 0;
     try {
         index.reset(
                 new faiss::IndexIDMap(faiss::read_index(file_name.c_str())));
     } catch (...) {
-        return static_cast<int>(ErrorType::UNKNOWN_ERROR);
+        ret = static_cast<int>(ErrorType::UNKNOWN_ERROR);
     }
-    return 0;
+    return ret;
 }
 
 int fserialize(VectorIndexPtr& index_handler, std::ostream& out_stream) {
@@ -371,13 +379,13 @@ int fserialize(VectorIndexPtr& index_handler, std::ostream& out_stream) {
             static_cast<HnswIndexHandler*>(index_handler);
     auto& index = hnsw_handler->get_index();
     StreamWriter writer(out_stream);
-
+    int ret = 0;
     try {
         faiss::write_index(index.get(), &writer);
     } catch (...) {
-        return static_cast<int>(ErrorType::UNKNOWN_ERROR);
+        ret = static_cast<int>(ErrorType::UNKNOWN_ERROR);
     }
-    return 0;
+    return ret;
 }
 
 int fdeserialize(VectorIndexPtr& index_handler, std::istream& in_stream) {
@@ -386,12 +394,13 @@ int fdeserialize(VectorIndexPtr& index_handler, std::istream& in_stream) {
     auto& index = hnsw_handler->get_index();
     StreamReader reader(in_stream);
 
+    int ret = 0;
     try {
         index.reset(new faiss::IndexIDMap(faiss::read_index(&reader)));
     } catch (...) {
-        return static_cast<int>(ErrorType::UNKNOWN_ERROR);
+        ret = static_cast<int>(ErrorType::UNKNOWN_ERROR);
     }
-    return 0;
+    return ret;
 }
 
 int delete_index(VectorIndexPtr& index_handler) {

@@ -10,7 +10,6 @@
  * See the Mulan PubL v2 for more details.
  */
 
-#include "lib/worker.h"
 #define USING_LOG_PREFIX STORAGE
 
 #include "ob_direct_load_struct.h"

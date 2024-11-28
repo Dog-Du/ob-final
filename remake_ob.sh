@@ -1,4 +1,4 @@
-bash ./build.sh release --make -j32
+bash ./build.sh debug --init --make -j32
 rm -rf ./tools/deploy/.obd/repository/oceanbase-ce/4.3.3.1
 echo "remove respository"
 ./tools/deploy/obd.sh destroy -n obcluster --rm
