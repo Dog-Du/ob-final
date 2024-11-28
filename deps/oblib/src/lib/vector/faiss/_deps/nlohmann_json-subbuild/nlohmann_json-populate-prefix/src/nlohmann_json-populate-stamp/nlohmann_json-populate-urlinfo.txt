@@ -1,0 +1,12 @@
+# This is a generated file and its contents are an internal implementation detail.
+# The download step will be re-executed if anything in this file changes.
+# No other meaning or use of this file is supported.
+
+method=url
+command=/home/user/.local/lib/python3.8/site-packages/cmake/data/bin/cmake;-P;/home/user/oceanbase-2024/oceanbase/deps/oblib/src/lib/vector/faiss/_deps/nlohmann_json-subbuild/nlohmann_json-populate-prefix/src/nlohmann_json-populate-stamp/download-nlohmann_json-populate.cmake;COMMAND;/home/user/.local/lib/python3.8/site-packages/cmake/data/bin/cmake;-P;/home/user/oceanbase-2024/oceanbase/deps/oblib/src/lib/vector/faiss/_deps/nlohmann_json-subbuild/nlohmann_json-populate-prefix/src/nlohmann_json-populate-stamp/verify-nlohmann_json-populate.cmake;COMMAND;/home/user/.local/lib/python3.8/site-packages/cmake/data/bin/cmake;-P;/home/user/oceanbase-2024/oceanbase/deps/oblib/src/lib/vector/faiss/_deps/nlohmann_json-subbuild/nlohmann_json-populate-prefix/src/nlohmann_json-populate-stamp/extract-nlohmann_json-populate.cmake
+source_dir=/home/user/oceanbase-2024/oceanbase/deps/oblib/src/lib/vector/faiss/_deps/nlohmann_json-src
+work_dir=/home/user/oceanbase-2024/oceanbase/deps/oblib/src/lib/vector/faiss/_deps
+url(s)=https://github.com/nlohmann/json/archive/refs/tags/v3.11.3.tar.gz;http://vsagcache.oss-rg-china-mainland.aliyuncs.com/nlohmann_json/v3.11.3.tar.gz
+hash=
+no_extract=
+

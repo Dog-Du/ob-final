@@ -1476,8 +1476,8 @@
   "ob_query_timeout": {
     "id": 10005,
     "name": "ob_query_timeout",
-    "default_value": "10000000",
-    "base_value": "10000000",
+    "default_value": "10000000000",
+    "base_value":    "10000000000",
     "data_type": "int",
     "info": "Query timeout in microsecond(us)",
     "flags": "GLOBAL | SESSION | NEED_SERIALIZE",

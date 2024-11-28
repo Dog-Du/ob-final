@@ -1498,7 +1498,7 @@ static struct VarsInit{
     }();
 
     [&] (){
-      ObSysVars[102].default_value_ = "10000000" ;
+      ObSysVars[102].default_value_ = "10000000000" ;
       ObSysVars[102].info_ = "Query timeout in microsecond(us)" ;
       ObSysVars[102].name_ = "ob_query_timeout" ;
       ObSysVars[102].data_type_ = ObIntType ;
@@ -1507,7 +1507,7 @@ static struct VarsInit{
       ObSysVars[102].id_ = SYS_VAR_OB_QUERY_TIMEOUT ;
       cur_max_var_id = MAX(cur_max_var_id, static_cast<int64_t>(SYS_VAR_OB_QUERY_TIMEOUT)) ;
       ObSysVarsIdToArrayIdx[SYS_VAR_OB_QUERY_TIMEOUT] = 102 ;
-      ObSysVars[102].base_value_ = "10000000" ;
+      ObSysVars[102].base_value_ =    "10000000000" ;
     ObSysVars[102].alias_ = "OB_SV_QUERY_TIMEOUT" ;
     }();
 
@@ -8480,7 +8480,7 @@ static struct VarsInit{
     ObSysVars[608].alias_ = "OB_SV_TABLE_ACCESS_POLICY" ;
     }();
 
-    if (cur_max_var_id >= ObSysVarFactory::OB_MAX_SYS_VAR_ID) { 
+    if (cur_max_var_id >= ObSysVarFactory::OB_MAX_SYS_VAR_ID) {
       HasInvalidSysVar = true;
     }
   }

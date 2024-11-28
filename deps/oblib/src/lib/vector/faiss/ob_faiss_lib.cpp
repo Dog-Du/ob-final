@@ -20,6 +20,7 @@
 #include <functional>
 #include <memory>
 #include "faiss/impl/FaissException.h"
+#include "faiss/impl/HNSW.h"
 
 namespace obvectorlib {
 
@@ -107,7 +108,7 @@ class HnswIndexHandler {
     void set_build(bool is_build) {
         is_build_ = is_build;
     }
-    bool is_build(bool is_build) {
+    bool is_build() {
         return is_build_;
     }
     // int build_index(const vsag::DatasetPtr& base);
@@ -143,6 +144,9 @@ class HnswIndexHandler {
     inline int get_dim() {
         return dim_;
     }
+
+    std::vector<float> vector_list;
+    std::vector<int64_t> ids;
 
    private:
     bool is_created_;
@@ -220,20 +224,18 @@ int create_index(
     bool is_support = is_supported_index(index_type);
 
     if (is_support) {
-        omp_set_num_threads(10);
+        // omp_set_num_threads(8);
         // create index
         std::shared_ptr<faiss::Index> index;
         std::shared_ptr<faiss::IndexIDMap> ix_id_map;
 
-        auto tmp_index = new faiss::IndexHNSWFlat(dim, 8, metric_type);
-
-        tmp_index->hnsw.efConstruction = 300;
-        tmp_index->hnsw.efSearch = 10;
+        auto tmp_index = new faiss::IndexHNSWFlat(dim, 16, metric_type);
+        tmp_index->hnsw.efConstruction = 200;
+        tmp_index->hnsw.efSearch = 20;
         tmp_index->is_trained = true;
 
         index.reset(tmp_index);
         ix_id_map.reset(new faiss::IndexIDMap(index.get()));
-        ix_id_map->is_trained = true;
 
         HnswIndexHandler* hnsw_handler = new HnswIndexHandler(
                 true,
@@ -246,6 +248,8 @@ int create_index(
                 index,
                 ix_id_map);
 
+        hnsw_handler->vector_list.reserve(128LL * 1000000);
+        hnsw_handler->ids.reserve(1000000);
         index_handler = static_cast<VectorIndexPtr>(hnsw_handler);
     } else {
         ret = static_cast<int>(ErrorType::UNSUPPORTED_INDEX);
@@ -288,6 +292,42 @@ int add_index(
     HnswIndexHandler* hnsw_handler =
             static_cast<HnswIndexHandler*>(index_handler);
     auto& index = hnsw_handler->get_index();
+
+    if (!hnsw_handler->is_build()) {
+        printf("[FAISS][DEBUG] add_index ::: push start\n");
+        for (int64_t i = 0, n = 1LL * size * dim; i < n; ++i) {
+            hnsw_handler->vector_list.push_back(vector[i]);
+        }
+
+        printf("[FAISS][DEBUG] add_index ::: push vector successfully\n");
+        for (int64_t i = 0; i < size; ++i) {
+            hnsw_handler->ids.push_back(ids[i]);
+        }
+
+        printf("[FAISS][DEBUG] add_index ::: push successfully, size : %d\n",
+               size);
+
+        if (hnsw_handler->ids.size() >= 1000'000) {
+            assert(hnsw_handler->ids.size() * hnsw_handler->get_dim() ==
+                   hnsw_handler->vector_list.size());
+
+            try {
+                index->add_with_ids(
+                        hnsw_handler->ids.size(),
+                        hnsw_handler->vector_list.data(),
+                        hnsw_handler->ids.data());
+            } catch (faiss::FaissException& e) {
+                std::cout << e.what() << std::endl;
+                return static_cast<int>(ErrorType::UNKNOWN_ERROR);
+            }
+            hnsw_handler->ids.clear();
+            hnsw_handler->vector_list.clear();
+            hnsw_handler->set_build(true);
+            omp_set_num_threads(8);
+        }
+        return 0;
+    }
+
     int ret = 0;
     try {
         index->add_with_ids(size, vector, ids);
@@ -320,28 +360,31 @@ int knn_search(
             static_cast<HnswIndexHandler*>(index_handler);
     auto& index = hnsw_handler->get_index();
 
+    if (topk <= 0 || dim <= 0) {
+        return static_cast<int>(ErrorType::INVALID_ARGUMENT);
+    }
+
+    float* dist_result = new float[dim * topk];
+    int64_t* ids_result = new int64_t[topk];
+
     int ret = 0;
     try {
         index->search(
-                1,
-                query_vector,
-                topk,
-                const_cast<float*&>(dist),
-                const_cast<int64_t*&>(ids));
+                1, query_vector, topk, dist_result, const_cast<int64_t*&>(ids));
     } catch (...) {
-        ret = static_cast<int>(ErrorType::UNKNOWN_ERROR);
+        delete[] dist_result;
+        delete[] ids_result;
+        return static_cast<int>(ErrorType::UNKNOWN_ERROR);
     }
 
-    if (ret != 0) {
-        return ret;
-    }
-
-    for (int i = topk - 1; i >= 0; --i) {
-        if (dist[i] != -1 && ids[i] != -1) {
+    for (int64_t i = topk - 1; i >= 0; --i) {
+        if (ids_result[i] != -1) {
             result_size = i + 1;
         }
     }
 
+    dist = dist_result;
+    ids = ids_result;
     return ret;
 }
 
@@ -367,8 +410,12 @@ int deserialize_bin(VectorIndexPtr& index_handler, const std::string dir) {
 
     int ret = 0;
     try {
-        index.reset(
-                new faiss::IndexIDMap(faiss::read_index(file_name.c_str())));
+        faiss::Index* i = faiss::read_index(file_name.c_str());
+        if (auto x = dynamic_cast<faiss::IndexIDMap*>(i)) {
+            index.reset(x);
+        } else {
+            index.reset(new faiss::IndexIDMap(i));
+        }
     } catch (...) {
         ret = static_cast<int>(ErrorType::UNKNOWN_ERROR);
     }
@@ -398,7 +445,13 @@ int fdeserialize(VectorIndexPtr& index_handler, std::istream& in_stream) {
 
     int ret = 0;
     try {
-        index.reset(new faiss::IndexIDMap(faiss::read_index(&reader)));
+        faiss::Index* i = faiss::read_index(&reader);
+
+        if (auto x = dynamic_cast<faiss::IndexIDMap*>(i)) {
+            index.reset(x);
+        } else {
+            index.reset(new faiss::IndexIDMap(i));
+        }
     } catch (faiss::FaissException& e) {
         std::cout << e.what() << std::endl;
         ret = static_cast<int>(ErrorType::UNKNOWN_ERROR);
