@@ -294,18 +294,19 @@ int add_index(
     auto& index = hnsw_handler->get_index();
 
     if (!hnsw_handler->is_build()) {
-        printf("[FAISS][DEBUG] add_index ::: push start\n");
+        // printf("[FAISS][DEBUG] add_index ::: push start\n");
         for (int64_t i = 0, n = 1LL * size * dim; i < n; ++i) {
             hnsw_handler->vector_list.push_back(vector[i]);
         }
 
-        printf("[FAISS][DEBUG] add_index ::: push vector successfully\n");
+        // printf("[FAISS][DEBUG] add_index ::: push vector successfully\n");
         for (int64_t i = 0; i < size; ++i) {
             hnsw_handler->ids.push_back(ids[i]);
         }
 
-        printf("[FAISS][DEBUG] add_index ::: push successfully, size : %d\n",
-               size);
+        //  printf("[FAISS][DEBUG] add_index ::: push successfully, size :
+        //  %d\n",
+        //       size);
 
         if (hnsw_handler->ids.size() >= 1000'000) {
             assert(hnsw_handler->ids.size() * hnsw_handler->get_dim() ==
