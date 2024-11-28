@@ -17,7 +17,7 @@ void generate_vector(std::vector<float>& vector, int64_t dim) {
     vector.reserve(dim);
 
     for (int64_t i = 0; i < dim; ++i) {
-        vector.push_back(r());
+        vector.push_back(r() % 100);
     }
 }
 
