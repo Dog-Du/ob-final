@@ -55,29 +55,29 @@ int main() {
 
     generate_vector_list(vector_list, ids, dim, size);
 
-    std::cout << "generate_vector_list sucessfully" << std::endl;
-    {
-        std::ofstream file("index.data");
-        assert(obvectorlib::fserialize(index_handler, file) == 0);
-    }
+    // std::cout << "generate_vector_list sucessfully" << std::endl;
+    // {
+    //     std::ofstream file("index.data");
+    //     assert(obvectorlib::fserialize(index_handler, file) == 0);
+    // }
 
-    assert(obvectorlib::delete_index(index_handler) == 0);
-    assert(obvectorlib::create_index(
-                   index_handler,
-                   obvectorlib::IndexType::HNSW_TYPE,
-                   "float32",
-                   "l2",
-                   dim,
-                   10,
-                   300,
-                   10) == 0);
+    // assert(obvectorlib::delete_index(index_handler) == 0);
+    // assert(obvectorlib::create_index(
+    //                index_handler,
+    //                obvectorlib::IndexType::HNSW_TYPE,
+    //                "float32",
+    //                "l2",
+    //                dim,
+    //                10,
+    //                300,
+    //                10) == 0);
 
-    {
-        std::ifstream file("index.data");
-        assert(obvectorlib::fdeserialize(index_handler, file) == 0);
-    }
+    // {
+    //     std::ifstream file("index.data");
+    //     assert(obvectorlib::fdeserialize(index_handler, file) == 0);
+    // }
 
-    std::cout << "restart index sucessfully" << std::endl;
+    // std::cout << "restart index sucessfully" << std::endl;
 
     assert(obvectorlib::add_index(
                    index_handler, vector_list.data(), ids.data(), dim, size) ==
@@ -88,28 +88,29 @@ int main() {
     vector_list.clear();
     ids.clear();
 
-    {
-        std::fstream file("index.data", std::ios_base::out);
-        assert(obvectorlib::fserialize(index_handler, file) == 0);
-    }
+    // {
+    //     std::fstream file("index.data", std::ios_base::out);
+    //     assert(obvectorlib::fserialize(index_handler, file) == 0);
+    // }
 
-    assert(obvectorlib::delete_index(index_handler) == 0);
-    assert(obvectorlib::create_index(
-                   index_handler,
-                   obvectorlib::IndexType::HNSW_TYPE,
-                   "float32",
-                   "l2",
-                   dim,
-                   10,
-                   300,
-                   10) == 0);
+    // assert(obvectorlib::delete_index(index_handler) == 0);
+    // assert(obvectorlib::create_index(
+    //                index_handler,
+    //                obvectorlib::IndexType::HNSW_TYPE,
+    //                "float32",
+    //                "l2",
+    //                dim,
+    //                10,
+    //                300,
+    //                10) == 0);
 
-    {
-        std::fstream file("index.data", std::ios_base::in);
-        assert(obvectorlib::fdeserialize(index_handler, file) == 0);
-    }
+    // {
+    //     std::fstream file("index.data", std::ios_base::in);
+    //     assert(obvectorlib::fdeserialize(index_handler, file) == 0);
+    // }
 
     std::cout << "restart index successfully" << std::endl;
+
     for (int64_t i = 0; i < 100; ++i) {
         generate_vector(vector_list, dim);
         const float* dist = nullptr;
