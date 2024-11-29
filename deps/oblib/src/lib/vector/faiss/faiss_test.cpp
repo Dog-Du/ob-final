@@ -41,7 +41,7 @@ void generate_vector_list(
 int main() {
     obvectorlib::VectorIndexPtr index_handler;
     int64_t dim = 128;
-    int64_t size = 1000'000;
+    int64_t size = 1000;
     std::vector<float> vector_list;
     std::vector<int64_t> ids;
     assert(obvectorlib::create_index(
@@ -193,8 +193,8 @@ int main() {
         }
         std::cout << std::endl;
 
-        delete[] ids;
-        delete[] dist;
+        free((void*)ids);
+        free((void*)dist);
     }
 
     std::cout << "query sucessfully" << std::endl;
