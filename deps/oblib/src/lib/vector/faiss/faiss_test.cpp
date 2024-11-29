@@ -41,7 +41,7 @@ void generate_vector_list(
 int main() {
     obvectorlib::VectorIndexPtr index_handler;
     int64_t dim = 128;
-    int64_t size = 1000'000;
+    int64_t size = 1000;
     int64_t index_size;
     std::vector<float> vector_list;
     std::vector<int64_t> ids;

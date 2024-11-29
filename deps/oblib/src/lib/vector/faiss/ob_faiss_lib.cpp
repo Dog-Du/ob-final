@@ -92,7 +92,8 @@ class HnswIndexHandler {
             int ef_search,
             int dim,
             std::shared_ptr<faiss::Index> index,
-            std::shared_ptr<faiss::IndexIDMap> ix_id_map)
+            std::shared_ptr<faiss::IndexIDMap> ix_id_map,
+            std::shared_ptr<faiss::IndexFlatL2> quantizer)
             : is_created_(is_create),
               is_build_(is_build),
               use_static_(use_static),
@@ -101,7 +102,8 @@ class HnswIndexHandler {
               ef_search_(ef_search),
               dim_(dim),
               index_(index),
-              ix_id_map_(ix_id_map) {}
+              ix_id_map_(ix_id_map),
+              quantizer_(quantizer) {}
 
     ~HnswIndexHandler() {
         index_ = nullptr;
@@ -146,7 +148,7 @@ class HnswIndexHandler {
         return dim_;
     }
 
-   private:
+   public:
     bool is_created_;
     bool is_build_;
     bool use_static_;
@@ -156,6 +158,7 @@ class HnswIndexHandler {
     int dim_;
     std::shared_ptr<faiss::Index> index_;
     std::shared_ptr<faiss::IndexIDMap> ix_id_map_;
+    std::shared_ptr<faiss::IndexFlatL2> quantizer_;
 };
 
 bool& get_init() {
@@ -242,12 +245,14 @@ int create_index(
         // create index
         std::shared_ptr<faiss::Index> index;
         std::shared_ptr<faiss::IndexIDMap> ix_id_map;
+        std::shared_ptr<faiss::IndexFlatL2> quantizer;
 
-        auto tmp_index = new faiss::IndexHNSWFlat(dim, 32, metric_type);
-        tmp_index->hnsw.efConstruction = 800;
-        tmp_index->hnsw.efSearch = 64;
-
+        // ann-benchmarks上的召回率0.98331，pqs=2224，M=16，efConstruction=500,efSearch=80
+        auto tmp_index = new faiss::IndexHNSWFlat(dim, 16, metric_type);
+        tmp_index->hnsw.efConstruction = 1000; // 提升一点，反正构建时间足够。
+        tmp_index->hnsw.efSearch = 80;
         index.reset(tmp_index);
+
         ix_id_map.reset(new faiss::IndexIDMap(index.get()));
 
         HnswIndexHandler* hnsw_handler = new HnswIndexHandler(
@@ -259,7 +264,8 @@ int create_index(
                 ef_search,
                 dim,
                 index,
-                ix_id_map);
+                ix_id_map,
+                quantizer);
 
         // get_static_vector_list().reserve(128LL * 1000000);
         // get_static_ids().reserve(1000000);
