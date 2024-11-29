@@ -41,7 +41,8 @@ void generate_vector_list(
 int main() {
     obvectorlib::VectorIndexPtr index_handler;
     int64_t dim = 128;
-    int64_t size = 1000;
+    int64_t size = 10000;
+    int64_t index_size;
     std::vector<float> vector_list;
     std::vector<int64_t> ids;
     assert(obvectorlib::create_index(
@@ -117,6 +118,9 @@ int main() {
         assert(obvectorlib::fdeserialize(index_handler, file) == 0);
     }
 
+    assert(obvectorlib::get_index_number(index_handler, index_size) == 0);
+    std::cout << "index_number : " << index_size << std::endl;
+
     std::cout << "restart index successfully" << std::endl;
 
     for (int64_t i = 0; i < 100; ++i) {
@@ -142,8 +146,8 @@ int main() {
         }
         std::cout << std::endl;
 
-        delete[] ids;
-        delete[] dist;
+        free((void*)ids);
+        free((void*)dist);
     }
 
     std::cout << "query sucessfully" << std::endl;
@@ -168,6 +172,8 @@ int main() {
         assert(obvectorlib::fdeserialize(index_handler, file) == 0);
     }
 
+    assert(obvectorlib::get_index_number(index_handler, index_size) == 0);
+    std::cout << "index_number : " << index_size << std::endl;
     std::cout << "restart index successfully" << std::endl;
 
     for (int64_t i = 0; i < 100; ++i) {

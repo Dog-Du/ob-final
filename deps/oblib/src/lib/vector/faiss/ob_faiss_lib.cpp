@@ -18,6 +18,7 @@
 #include <cstring>
 #include <fstream>
 #include <functional>
+#include <ios>
 #include <memory>
 #include "faiss/impl/FaissException.h"
 #include "faiss/impl/HNSW.h"
@@ -113,7 +114,7 @@ class HnswIndexHandler {
     }
     // int build_index(const vsag::DatasetPtr& base);
     inline int get_index_number() {
-        return static_cast<int>(index_->ntotal);
+        return static_cast<int>(ix_id_map_->ntotal);
     }
     // int add_index(const vsag::DatasetPtr& incremental);
     // int knn_search(const vsag::DatasetPtr& query, int64_t topk,
@@ -156,6 +157,11 @@ class HnswIndexHandler {
     std::shared_ptr<faiss::Index> index_;
     std::shared_ptr<faiss::IndexIDMap> ix_id_map_;
 };
+
+bool& get_init() {
+    static bool init = false;
+    return init;
+}
 
 std::vector<float>& get_static_vector_list() {
     static std::vector<float> vector_list;
@@ -236,9 +242,9 @@ int create_index(
         std::shared_ptr<faiss::Index> index;
         std::shared_ptr<faiss::IndexIDMap> ix_id_map;
 
-        auto tmp_index = new faiss::IndexHNSWFlat(dim, 16, metric_type);
-        tmp_index->hnsw.efConstruction = 200;
-        tmp_index->hnsw.efSearch = 20;
+        auto tmp_index = new faiss::IndexHNSWFlat(dim, 32, metric_type);
+        tmp_index->hnsw.efConstruction = 400;
+        tmp_index->hnsw.efSearch = 64;
         tmp_index->is_trained = true;
 
         index.reset(tmp_index);
@@ -300,51 +306,43 @@ int add_index(
             static_cast<HnswIndexHandler*>(index_handler);
     auto& index = hnsw_handler->get_index();
 
-    // if (!hnsw_handler->is_build()) {
-    //     // printf("[FAISS][DEBUG] add_index ::: push start\n");
-    //     for (int64_t i = 0, n = 1LL * size * dim; i < n; ++i) {
-    //         get_static_vector_list().push_back(vector[i]);
-    //     }
+    if (!get_init()) {
+        for (int64_t i = 0, n = 1LL * size * dim; i < n; ++i) {
+            get_static_vector_list().push_back(vector[i]);
+        }
 
-    //     // printf("[FAISS][DEBUG] add_index ::: push vector successfully\n");
-    //     for (int64_t i = 0; i < size; ++i) {
-    //         get_static_ids().push_back(ids[i]);
-    //     }
+        for (int64_t i = 0; i < size; ++i) {
+            get_static_ids().push_back(ids[i]);
+        }
 
-    //     //  printf("[FAISS][DEBUG] add_index ::: push successfully, size :
-    //     //  %d\n",
-    //     //       size);
+        if (get_static_ids().size() >= 1000'000) {
+            assert(get_static_ids().size() * hnsw_handler->get_dim() ==
+                   get_static_vector_list().size());
 
-    //     if (get_static_ids().size() >= 1000'000) {
-    //         assert(get_static_ids().size() * hnsw_handler->get_dim() ==
-    //                get_static_vector_list().size());
+            try {
+                index->add_with_ids(
+                        get_static_ids().size(),
+                        get_static_vector_list().data(),
+                        get_static_ids().data());
+            } catch (faiss::FaissException& e) {
+                std::cout << e.what() << std::endl;
+                return static_cast<int>(ErrorType::UNKNOWN_ERROR);
+            }
+            get_static_ids().clear();
+            get_static_vector_list().clear();
+            omp_set_num_threads(8);
+            assert(index->ntotal >= 1000'000);
+            get_init() = true;
+        }
 
-    //         try {
-    //             index->add_with_ids(
-    //                     get_static_ids().size(),
-    //                     get_static_vector_list().data(),
-    //                     get_static_ids().data());
-    //         } catch (faiss::FaissException& e) {
-    //             std::cout << e.what() << std::endl;
-    //             return static_cast<int>(ErrorType::UNKNOWN_ERROR);
-    //         }
-    //         get_static_ids().clear();
-    //         get_static_vector_list().clear();
-    //         hnsw_handler->set_build(true);
-    //         omp_set_num_threads(8);
-    //     }
-    //     return 0;
-    // }
+        return 0;
+    }
 
     int ret = 0;
     try {
         index->add_with_ids(size, vector, ids);
     } catch (...) {
         ret = static_cast<int>(ErrorType::UNKNOWN_ERROR);
-    }
-
-    if (index->ntotal >= 1000'000) {
-        omp_set_num_threads(8);
     }
     return ret;
 }
@@ -354,7 +352,7 @@ int get_index_number(VectorIndexPtr& index_handler, int64_t& size) {
         return static_cast<int>(ErrorType::UNKNOWN_ERROR);
     }
     HnswIndexHandler* hnsw = static_cast<HnswIndexHandler*>(index_handler);
-    size = hnsw->get_index_number();
+    size = hnsw->get_index_number() + get_static_ids().size();
     return 0;
 }
 
@@ -377,24 +375,23 @@ int knn_search(
     float* dist_result = (float*)malloc(sizeof(float) * topk);
     int64_t* ids_result = (int64_t*)malloc(sizeof(int64_t) * topk);
 
-    // if (!get_static_ids().empty()) {
-    //     assert(get_static_ids().size() * hnsw_handler->get_dim() ==
-    //            get_static_vector_list().size());
+    if (!get_static_ids().empty()) {
+        assert(get_static_ids().size() * hnsw_handler->get_dim() ==
+               get_static_vector_list().size());
 
-    //     try {
-    //         index->add_with_ids(
-    //                 get_static_ids().size(),
-    //                 get_static_vector_list().data(),
-    //                 get_static_ids().data());
-    //     } catch (faiss::FaissException& e) {
-    //         std::cout << e.what() << std::endl;
-    //         return static_cast<int>(ErrorType::UNKNOWN_ERROR);
-    //     }
-    //     get_static_ids().clear();
-    //     get_static_vector_list().clear();
-    //     hnsw_handler->set_build(true);
-    //     omp_set_num_threads(8);
-    // }
+        try {
+            index->add_with_ids(
+                    get_static_ids().size(),
+                    get_static_vector_list().data(),
+                    get_static_ids().data());
+        } catch (faiss::FaissException& e) {
+            std::cout << e.what() << std::endl;
+            return static_cast<int>(ErrorType::UNKNOWN_ERROR);
+        }
+        get_static_ids().clear();
+        get_static_vector_list().clear();
+        omp_set_num_threads(8);
+    }
 
     int ret = 0;
     try {
@@ -420,43 +417,40 @@ int knn_search(
 }
 
 int serialize(VectorIndexPtr& index_handler, const std::string dir) {
-    HnswIndexHandler* hnsw_handler =
-            static_cast<HnswIndexHandler*>(index_handler);
-    auto& index = hnsw_handler->get_index();
     std::string file_name = dir + "hnsw.data";
-    int ret = 0;
-    try {
-        faiss::write_index(index.get(), file_name.c_str());
-    } catch (...) {
-        ret = static_cast<int>(ErrorType::UNKNOWN_ERROR);
-    }
-    return ret;
+    std::ofstream ftream(file_name, std::ios_base::out);
+    return fserialize(index_handler, ftream);
 }
 
 int deserialize_bin(VectorIndexPtr& index_handler, const std::string dir) {
-    HnswIndexHandler* hnsw_handler =
-            static_cast<HnswIndexHandler*>(index_handler);
-    auto& index = hnsw_handler->get_index();
     std::string file_name = dir + "hnsw.data";
-
-    int ret = 0;
-    try {
-        faiss::Index* i = faiss::read_index(file_name.c_str());
-        if (auto x = dynamic_cast<faiss::IndexIDMap*>(i)) {
-            index.reset(x);
-        } else {
-            index.reset(new faiss::IndexIDMap(i));
-        }
-    } catch (...) {
-        ret = static_cast<int>(ErrorType::UNKNOWN_ERROR);
-    }
-    return ret;
+    std::ifstream fstream(file_name, std::ios_base::in);
+    return fdeserialize(index_handler, fstream);
 }
 
 int fserialize(VectorIndexPtr& index_handler, std::ostream& out_stream) {
     HnswIndexHandler* hnsw_handler =
             static_cast<HnswIndexHandler*>(index_handler);
     auto& index = hnsw_handler->get_index();
+
+    if (!get_static_ids().empty()) {
+        assert(get_static_ids().size() * hnsw_handler->get_dim() ==
+               get_static_vector_list().size());
+
+        try {
+            index->add_with_ids(
+                    get_static_ids().size(),
+                    get_static_vector_list().data(),
+                    get_static_ids().data());
+        } catch (faiss::FaissException& e) {
+            std::cout << e.what() << std::endl;
+            return static_cast<int>(ErrorType::UNKNOWN_ERROR);
+        }
+        get_static_ids().clear();
+        get_static_vector_list().clear();
+        omp_set_num_threads(8);
+    }
+
     StreamWriter writer(out_stream);
     int ret = 0;
     try {
@@ -469,8 +463,7 @@ int fserialize(VectorIndexPtr& index_handler, std::ostream& out_stream) {
 }
 
 int fdeserialize(VectorIndexPtr& index_handler, std::istream& in_stream) {
-    HnswIndexHandler* hnsw_handler =
-            static_cast<HnswIndexHandler*>(index_handler);
+    auto* hnsw_handler = static_cast<HnswIndexHandler*>(index_handler);
     bool use_static = hnsw_handler->get_use_static();
     int max_degree = hnsw_handler->get_max_degree();
     int ef_construction = hnsw_handler->get_ef_construction();
@@ -489,6 +482,7 @@ int fdeserialize(VectorIndexPtr& index_handler, std::istream& in_stream) {
         return ret;
     }
 
+    hnsw_handler = static_cast<HnswIndexHandler*>(index_handler);
     auto& index = hnsw_handler->get_index();
 
     StreamReader reader(in_stream);
