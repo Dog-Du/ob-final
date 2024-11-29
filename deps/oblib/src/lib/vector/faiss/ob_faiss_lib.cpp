@@ -361,26 +361,25 @@ int knn_search(
             static_cast<HnswIndexHandler*>(index_handler);
     auto& index = hnsw_handler->get_index();
 
-    if (topk <= 0 || dim <= 0) {
-        return static_cast<int>(ErrorType::INVALID_ARGUMENT);
-    }
-
-    float* dist_result = new float[dim * topk];
+    float* dist_result = new float[topk];
     int64_t* ids_result = new int64_t[topk];
 
     int ret = 0;
     try {
         index->search(
-                1, query_vector, topk, dist_result, const_cast<int64_t*&>(ids));
-    } catch (...) {
+                1, query_vector, topk, dist_result, ids_result);
+    } catch (faiss::FaissException& e) {
+        std::cout << e.what() << std::endl;
         delete[] dist_result;
         delete[] ids_result;
         return static_cast<int>(ErrorType::UNKNOWN_ERROR);
     }
 
+    result_size = 0;
     for (int64_t i = topk - 1; i >= 0; --i) {
-        if (ids_result[i] != -1) {
+        if (ids_result[i] != -1 || dist_result[i] != -1) {
             result_size = i + 1;
+            break;
         }
     }
 
