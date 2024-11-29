@@ -216,10 +216,11 @@ int create_index(
         return static_cast<int>(ErrorType::INVALID_ARGUMENT);
     }
 
-    printf("[FAISS][DEBUG] create_index ::: dtype : %s, metric : %s, dim : %d\n",
-           dtype,
-           metric,
-           dim);
+    // printf("[FAISS][DEBUG] create_index ::: dtype : %s, metric : %s, dim :
+    // %d\n",
+    //        dtype,
+    //        metric,
+    //        dim);
     faiss::MetricType metric_type = faiss::MetricType::METRIC_Linf;
 
     if (strcmp(metric, "l2") == 0) {
@@ -243,9 +244,8 @@ int create_index(
         std::shared_ptr<faiss::IndexIDMap> ix_id_map;
 
         auto tmp_index = new faiss::IndexHNSWFlat(dim, 32, metric_type);
-        tmp_index->hnsw.efConstruction = 400;
+        tmp_index->hnsw.efConstruction = 800;
         tmp_index->hnsw.efSearch = 64;
-        tmp_index->is_trained = true;
 
         index.reset(tmp_index);
         ix_id_map.reset(new faiss::IndexIDMap(index.get()));
@@ -277,7 +277,9 @@ int build_index(
         int64_t* ids,
         int dim,
         int size) {
-    printf("[FAISS][DEBUG] create_index ::: dim : %d, size : %d\n", dim, size);
+    return 1;
+    // printf("[FAISS][DEBUG] create_index ::: dim : %d, size : %d\n", dim,
+    // size);
     HnswIndexHandler* hnsw_handler =
             static_cast<HnswIndexHandler*>(index_handler);
     auto& index = hnsw_handler->get_index();
@@ -320,6 +322,12 @@ int add_index(
                    get_static_vector_list().size());
 
             try {
+                if (!index->is_trained) {
+                    index->train(
+                            get_static_ids().size(),
+                            get_static_vector_list().data());
+                }
+
                 index->add_with_ids(
                         get_static_ids().size(),
                         get_static_vector_list().data(),
@@ -380,6 +388,11 @@ int knn_search(
                get_static_vector_list().size());
 
         try {
+            if (!index->is_trained) {
+                index->train(
+                        get_static_ids().size(),
+                        get_static_vector_list().data());
+            }
             index->add_with_ids(
                     get_static_ids().size(),
                     get_static_vector_list().data(),
@@ -438,6 +451,11 @@ int fserialize(VectorIndexPtr& index_handler, std::ostream& out_stream) {
                get_static_vector_list().size());
 
         try {
+            if (!index->is_trained) {
+                index->train(
+                        get_static_ids().size(),
+                        get_static_vector_list().data());
+            }
             index->add_with_ids(
                     get_static_ids().size(),
                     get_static_vector_list().data(),
