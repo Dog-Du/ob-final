@@ -17,7 +17,7 @@
 
 
 
-namespace vsag_lib {
+namespace obvectorlib {
 #ifdef __cplusplus
 extern "C" {
 #endif

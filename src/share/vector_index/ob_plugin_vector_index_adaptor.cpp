@@ -1671,39 +1671,38 @@ int ObPluginVectorIndexAdaptor::vsag_query_vids(
     int64_t dim, float *query_vector, ObVectorQueryVidIterator *&vids_iter) {
   INIT_SUCC(ret);
   roaring::api::roaring64_bitmap_t *ibitmap = nullptr;
-  // roaring::api::roaring64_bitmap_t *dbitmap = nullptr;
+  roaring::api::roaring64_bitmap_t *dbitmap = nullptr;
 
   int64_t *merge_vids = nullptr;
   const int64_t *delta_vids = nullptr;
-  // const int64_t *snap_vids = nullptr;
+  const int64_t *snap_vids = nullptr;
   const float *delta_distances = nullptr;
-  // const float *snap_distances = nullptr;
+  const float *snap_distances = nullptr;
   int64_t delta_res_cnt = 0;
-  // int64_t snap_res_cnt = 0;
+  int64_t snap_res_cnt = 0;
 
   if (OB_FAIL(check_vsag_mem_used())) {
     LOG_WARN("failed to check vsag mem used.", K(ret));
+  } else if (OB_FAIL(merge_and_generate_bitmap(ctx, ibitmap, dbitmap))) {
+    LOG_WARN("failed to merge and generate bitmap.", K(ret));
   }
-  // else if (OB_FAIL(merge_and_generate_bitmap(ctx, ibitmap, dbitmap))) {
-  //   LOG_WARN("failed to merge and generate bitmap.", K(ret));
-  // }
 
 // for dubug
 #ifndef NDEBUG
-  // if (OB_FAIL(ret)) {
-  // } else if (is_mem_data_init_atomic(VIRT_INC) &&
-  //            OB_FAIL(print_bitmap(ctx->bitmaps_->insert_bitmap_))) {
-  //   LOG_WARN("failed to print bitmap.", K(ret));
-  // } else if (is_mem_data_init_atomic(VIRT_INC) &&
-  //            OB_FAIL(print_bitmap(ctx->bitmaps_->delete_bitmap_))) {
-  //   LOG_WARN("failed to print bitmap.", K(ret));
-  // } else if (is_mem_data_init_atomic(VIRT_BITMAP) &&
-  //            OB_FAIL(print_bitmap(vbitmap_data_->bitmap_->insert_bitmap_))) {
-  //   LOG_WARN("failed to print bitmap.", K(ret));
-  // } else if (is_mem_data_init_atomic(VIRT_BITMAP) &&
-  //            OB_FAIL(print_bitmap(vbitmap_data_->bitmap_->delete_bitmap_))) {
-  //   LOG_WARN("failed to print bitmap.", K(ret));
-  // }
+  if (OB_FAIL(ret)) {
+  } else if (is_mem_data_init_atomic(VIRT_INC) &&
+             OB_FAIL(print_bitmap(ctx->bitmaps_->insert_bitmap_))) {
+    LOG_WARN("failed to print bitmap.", K(ret));
+  } else if (is_mem_data_init_atomic(VIRT_INC) &&
+             OB_FAIL(print_bitmap(ctx->bitmaps_->delete_bitmap_))) {
+    LOG_WARN("failed to print bitmap.", K(ret));
+  } else if (is_mem_data_init_atomic(VIRT_BITMAP) &&
+             OB_FAIL(print_bitmap(vbitmap_data_->bitmap_->insert_bitmap_))) {
+    LOG_WARN("failed to print bitmap.", K(ret));
+  } else if (is_mem_data_init_atomic(VIRT_BITMAP) &&
+             OB_FAIL(print_bitmap(vbitmap_data_->bitmap_->delete_bitmap_))) {
+    LOG_WARN("failed to print bitmap.", K(ret));
+  }
 #endif
 
   if (OB_SUCC(ret)) {
@@ -1720,28 +1719,28 @@ int ObPluginVectorIndexAdaptor::vsag_query_vids(
     }
   }
 
-  // if (OB_SUCC(ret)) {
-  //   lib::ObMallocHookAttrGuard malloc_guard(
-  //       lib::ObMemAttr(tenant_id_, "VIndexVsagADP"));
-  //   TCRLockGuard lock_guard(snap_data_->mem_data_rwlock_);
-  //   if (OB_FAIL(is_mem_data_init_atomic(VIRT_SNAP) &&
-  //               obvectorutil::knn_search(
-  //                   get_snap_index(), query_vector, dim,
-  //                   query_cond->query_limit_, snap_distances, snap_vids,
-  //                   snap_res_cnt, query_cond->ef_search_, dbitmap))) {
-  //     ret = ObPluginVectorIndexHelper::vsag_errcode_2ob(ret);
-  //     LOG_WARN("knn search snap failed.", K(ret), K(dim));
-  //   }
-  // }
+  if (OB_SUCC(ret)) {
+    lib::ObMallocHookAttrGuard malloc_guard(
+        lib::ObMemAttr(tenant_id_, "VIndexVsagADP"));
+    TCRLockGuard lock_guard(snap_data_->mem_data_rwlock_);
+    if (OB_FAIL(is_mem_data_init_atomic(VIRT_SNAP) &&
+                obvectorutil::knn_search(
+                    get_snap_index(), query_vector, dim,
+                    query_cond->query_limit_, snap_distances, snap_vids,
+                    snap_res_cnt, query_cond->ef_search_, dbitmap))) {
+      ret = ObPluginVectorIndexHelper::vsag_errcode_2ob(ret);
+      LOG_WARN("knn search snap failed.", K(ret), K(dim));
+    }
+  }
 
   if (OB_FAIL(ret)) {
   } else {
     int64_t actual_res_cnt = 0;
     const ObVsagQueryResult delta_data = {delta_res_cnt, delta_vids,
                                           delta_distances};
-    // const ObVsagQueryResult snap_data = {snap_res_cnt, snap_vids,
-    //                                      snap_distances};
-    uint64_t tmp_result_cnt = delta_res_cnt;
+    const ObVsagQueryResult snap_data = {snap_res_cnt, snap_vids,
+                                         snap_distances};
+    uint64_t tmp_result_cnt = delta_res_cnt + snap_res_cnt;
     uint64_t max_res_cnt = tmp_result_cnt < query_cond->query_limit_
                                ? tmp_result_cnt
                                : query_cond->query_limit_;
@@ -1760,7 +1759,7 @@ int ObPluginVectorIndexAdaptor::vsag_query_vids(
       ret = OB_ALLOCATE_MEMORY_FAILED;
       LOG_WARN("failed to allocator merge vids.", K(ret));
     } else if (OB_FAIL(ObPluginVectorIndexHelper::merge_delta_and_snap_vids(
-                   delta_data, delta_data, query_cond->query_limit_,
+                   delta_data, snap_data, query_cond->query_limit_,
                    actual_res_cnt, merge_vids))) {
       LOG_WARN("failed to merge delta and snap vids.", K(ret));
     }
@@ -1794,17 +1793,17 @@ int ObPluginVectorIndexAdaptor::vsag_query_vids(
     }
   }
 
-  // if (snap_res_cnt != 0) {
-  //   if (snap_distances != nullptr) {
-  //     snap_data_->mem_ctx_->Deallocate((void *)snap_distances);
-  //     snap_distances = nullptr;
-  //   }
+  if (snap_res_cnt != 0) {
+    if (snap_distances != nullptr) {
+      snap_data_->mem_ctx_->Deallocate((void *)snap_distances);
+      snap_distances = nullptr;
+    }
 
-  //   if (snap_vids != nullptr) {
-  //     snap_data_->mem_ctx_->Deallocate((void *)snap_vids);
-  //     snap_distances = nullptr;
-  //   }
-  // }
+    if (snap_vids != nullptr) {
+      snap_data_->mem_ctx_->Deallocate((void *)snap_vids);
+      snap_distances = nullptr;
+    }
+  }
   LOG_TRACE("now all_vsag_used is: ", K(ATOMIC_LOAD(all_vsag_use_mem_)));
   return ret;
 }

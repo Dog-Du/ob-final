@@ -5,7 +5,7 @@
 #include <map>
 #include <omp.h>
 
-namespace vsag_lib {
+namespace obvectorlib {
 
 // // 暂时只有HNSW索引，同时操作只有创建索引，删除索引，对索引插入，对索引搜索。不支持对索引删除
 

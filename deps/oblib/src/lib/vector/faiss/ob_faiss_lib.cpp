@@ -241,7 +241,7 @@ int create_index(
     bool is_support = is_supported_index(index_type);
 
     if (is_support) {
-        // omp_set_num_threads(8);
+        // // omp_set_num_threads(8);
         // create index
         std::shared_ptr<faiss::Index> index;
         std::shared_ptr<faiss::IndexIDMap> ix_id_map;
@@ -249,7 +249,7 @@ int create_index(
 
         // ann-benchmarks上的召回率0.98331，pqs=2224，M=16，efConstruction=500,efSearch=80
         auto tmp_index = new faiss::IndexHNSWFlat(dim, 24, metric_type);
-        tmp_index->hnsw.efConstruction = 500; // 提升一点，反正构建时间足够。
+        tmp_index->hnsw.efConstruction = 1000; // 提升一点，反正构建时间足够。
         tmp_index->hnsw.efSearch = 80;
         index.reset(tmp_index);
 
@@ -344,7 +344,7 @@ int add_index(
             }
             get_static_ids().clear();
             get_static_vector_list().clear();
-            omp_set_num_threads(8);
+            // omp_set_num_threads(8);
             assert(index->ntotal >= 1000'000);
             get_init() = true;
         }
@@ -409,7 +409,7 @@ int knn_search(
         }
         get_static_ids().clear();
         get_static_vector_list().clear();
-        omp_set_num_threads(8);
+        // omp_set_num_threads(8);
     }
 
     int ret = 0;
@@ -472,7 +472,7 @@ int fserialize(VectorIndexPtr& index_handler, std::ostream& out_stream) {
         }
         get_static_ids().clear();
         get_static_vector_list().clear();
-        omp_set_num_threads(8);
+        // omp_set_num_threads(8);
     }
 
     StreamWriter writer(out_stream);
@@ -494,6 +494,7 @@ int fdeserialize(VectorIndexPtr& index_handler, std::istream& in_stream) {
     int ef_search = hnsw_handler->get_ef_search();
     int dim = hnsw_handler->get_dim();
     int ret = 0;
+    delete_index(index_handler);
     if ((ret = create_index(
                  index_handler,
                  IndexType::HNSW_TYPE,

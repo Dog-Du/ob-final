@@ -13,13 +13,13 @@
 #ifndef OB_VECTOR_UTIL_H
 #define OB_VECTOR_UTIL_H
 #include <stdint.h>
-// #include <vsag/ob_vsag_lib.h>
+#include <vsag/ob_vsag_lib.h>
 #include <vsag/allocator.h>
 #include <vsag/logger.h>
 #include <fstream>
 #include <omp.h>
 
-#include "faiss/ob_faiss_lib.h"
+// #include "faiss/ob_faiss_lib.h"
 
 namespace oceanbase {
 namespace common {

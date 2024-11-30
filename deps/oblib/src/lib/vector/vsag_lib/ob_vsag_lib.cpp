@@ -19,8 +19,9 @@
 #include "vsag/errors.h"
 #include "vsag/factory.h"
 #include "vsag/logger.h"
+#include "vsag/options.h"
 
-namespace vsag_lib {
+namespace obvectorlib {
 
 struct SlowTaskTimer {
     SlowTaskTimer(const std::string& name, int64_t log_threshold_ms = 0);
@@ -147,7 +148,6 @@ private:
 
 int
 HnswIndexHandler::build_index(const vsag::DatasetPtr& base) {
-    return 1;
     vsag::ErrorType error = vsag::ErrorType::UNKNOWN_ERROR;
     if (const auto num = index_->Build(base); num.has_value()) {
         return 0;
@@ -164,7 +164,6 @@ HnswIndexHandler::get_index_number() {
 
 int
 HnswIndexHandler::add_index(const vsag::DatasetPtr& incremental) {
-    return 1;
     vsag::ErrorType error = vsag::ErrorType::UNKNOWN_ERROR;
     if (const auto num = index_->Add(incremental); num.has_value()) {
         vsag::logger::debug(" after add index, index count {}", get_index_number());
@@ -183,7 +182,6 @@ HnswIndexHandler::knn_search(const vsag::DatasetPtr& query,
                              const int64_t*& ids,
                              int64_t& result_size,
                              const std::function<bool(int64_t)>& filter) {
-    return 1;
     vsag::logger::debug("  search_parameters:{}", parameters);
     vsag::logger::debug("  topk:{}", topk);
     vsag::ErrorType error = vsag::ErrorType::UNKNOWN_ERROR;
@@ -236,6 +234,7 @@ set_logger(void* logger_ptr) {
 
 void
 set_block_size_limit(uint64_t size) {
+    vsag::Options::Instance().set_block_size_limit(size);
     return;
 }
 
@@ -254,7 +253,6 @@ create_index(VectorIndexPtr& index_handler,
              int ef_construction,
              int ef_search,
              void* allocator) {
-    return 1;
     vsag::logger::debug("TRACE LOG[test_create_index]:");
     vsag::ErrorType error = vsag::ErrorType::UNKNOWN_ERROR;
     int ret = 0;
@@ -324,7 +322,6 @@ create_index(VectorIndexPtr& index_handler,
 
 int
 build_index(VectorIndexPtr& index_handler, float* vector_list, int64_t* ids, int dim, int size) {
-    return 1;
     vsag::logger::debug("TRACE LOG[build_index]:");
     vsag::ErrorType error = vsag::ErrorType::UNKNOWN_ERROR;
     int ret = 0;
@@ -348,7 +345,6 @@ build_index(VectorIndexPtr& index_handler, float* vector_list, int64_t* ids, int
 
 int
 add_index(VectorIndexPtr& index_handler, float* vector, int64_t* ids, int dim, int size) {
-    return 1;
     vsag::logger::debug("TRACE LOG[add_index]:");
     vsag::ErrorType error = vsag::ErrorType::UNKNOWN_ERROR;
     int ret = 0;
@@ -373,7 +369,6 @@ add_index(VectorIndexPtr& index_handler, float* vector, int64_t* ids, int dim, i
 
 int
 get_index_number(VectorIndexPtr& index_handler, int64_t& size) {
-    return 1;
     vsag::ErrorType error = vsag::ErrorType::UNKNOWN_ERROR;
     if (index_handler == nullptr) {
         vsag::logger::debug("   null pointer addr, index_handler:{}", (void*)index_handler);
@@ -394,7 +389,6 @@ knn_search(VectorIndexPtr& index_handler,
            int64_t& result_size,
            int ef_search,
            void* invalid) {
-    return 1;
     vsag::logger::debug("TRACE LOG[knn_search]:");
     vsag::ErrorType error = vsag::ErrorType::UNKNOWN_ERROR;
     int ret = 0;
@@ -423,7 +417,6 @@ knn_search(VectorIndexPtr& index_handler,
 
 int
 serialize(VectorIndexPtr& index_handler, const std::string dir) {
-    return 1;
     vsag::logger::debug("TRACE LOG[serialize]:");
     vsag::ErrorType error = vsag::ErrorType::UNKNOWN_ERROR;
     int ret = 0;
@@ -459,7 +452,6 @@ serialize(VectorIndexPtr& index_handler, const std::string dir) {
 
 int
 fserialize(VectorIndexPtr& index_handler, std::ostream& out_stream) {
-    return 1;
     vsag::logger::debug("TRACE LOG[fserialize]:");
     vsag::ErrorType error = vsag::ErrorType::UNKNOWN_ERROR;
     int ret = 0;
@@ -482,7 +474,6 @@ fserialize(VectorIndexPtr& index_handler, std::ostream& out_stream) {
 
 int
 fdeserialize(VectorIndexPtr& index_handler, std::istream& in_stream) {
-    return 1;
     vsag::logger::debug("TRACE LOG[fdeserialize]:");
     vsag::ErrorType error = vsag::ErrorType::UNKNOWN_ERROR;
     int ret = 0;
@@ -530,7 +521,6 @@ fdeserialize(VectorIndexPtr& index_handler, std::istream& in_stream) {
 
 int
 deserialize_bin(VectorIndexPtr& index_handler, const std::string dir) {
-    return 1;
     vsag::logger::debug("TRACE LOG[deserialize]:");
     vsag::ErrorType error = vsag::ErrorType::UNKNOWN_ERROR;
     int ret = 0;
@@ -588,7 +578,6 @@ deserialize_bin(VectorIndexPtr& index_handler, const std::string dir) {
 
 int
 delete_index(VectorIndexPtr& index_handler) {
-    return 1;
     vsag::logger::debug("TRACE LOG[delete_index]");
     vsag::logger::debug("   delete index handler addr {} : hnsw index use count {}",
                         (void*)static_cast<HnswIndexHandler*>(index_handler)->get_index().get(),
