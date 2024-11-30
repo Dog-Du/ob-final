@@ -134,41 +134,41 @@ int ObPluginVectorIndexHelper::merge_delta_and_snap_vids(const ObVsagQueryResult
   INIT_SUCC(ret);
   actual_cnt = 0;
   int64_t res_num = 0;
-  if (first.total_ == 0) {
+  // if (first.total_ == 0) {
     while (res_num < total && res_num < second.total_) {
       vids_result[res_num] = second.vids_[res_num];
       res_num++;
     }
     actual_cnt = res_num;
-  } else if (second.total_ == 0) {
-    while (res_num < total && res_num < first.total_) {
-      vids_result[res_num] = first.vids_[res_num];
-      res_num++;
-    }
-    actual_cnt = res_num;
-  } else if (OB_ISNULL(first.vids_) || OB_ISNULL(second.vids_)) {
-    ret = OB_ERR_UNEXPECTED;
-    LOG_WARN("get vids invalid.", K(ret), K(first.vids_), K(second.vids_));
-  } else {
-    int64_t i = 0, j = 0;
-    while (res_num < total && i < first.total_ && j < second.total_) {
-      if (first.distances_[i] <= second.distances_[j]) {
-        vids_result[res_num++] = first.vids_[i++];
-      } else {
-        vids_result[res_num++] = second.vids_[j++];
-      }
-    }
+  // } else if (second.total_ == 0) {
+  //   while (res_num < total && res_num < first.total_) {
+  //     vids_result[res_num] = first.vids_[res_num];
+  //     res_num++;
+  //   }
+  //   actual_cnt = res_num;
+  // } else if (OB_ISNULL(first.vids_) || OB_ISNULL(second.vids_)) {
+  //   ret = OB_ERR_UNEXPECTED;
+  //   LOG_WARN("get vids invalid.", K(ret), K(first.vids_), K(second.vids_));
+  // } else {
+  //   int64_t i = 0, j = 0;
+  //   while (res_num < total && i < first.total_ && j < second.total_) {
+  //     if (first.distances_[i] <= second.distances_[j]) {
+  //       vids_result[res_num++] = first.vids_[i++];
+  //     } else {
+  //       vids_result[res_num++] = second.vids_[j++];
+  //     }
+  //   }
 
-    while (res_num < total && i < first.total_) {
-      vids_result[res_num++] = first.vids_[i++];
-    }
+  //   while (res_num < total && i < first.total_) {
+  //     vids_result[res_num++] = first.vids_[i++];
+  //   }
 
-    while (res_num < total && j < second.total_) {
-      vids_result[res_num++] = second.vids_[j++];
-    }
+  //   while (res_num < total && j < second.total_) {
+  //     vids_result[res_num++] = second.vids_[j++];
+  //   }
 
-    actual_cnt = res_num;
-  }
+  //   actual_cnt = res_num;
+  // }
 
   return ret;
 }

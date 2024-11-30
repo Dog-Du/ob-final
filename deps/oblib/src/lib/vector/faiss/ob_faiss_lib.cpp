@@ -248,8 +248,8 @@ int create_index(
         std::shared_ptr<faiss::IndexFlatL2> quantizer;
 
         // ann-benchmarks上的召回率0.98331，pqs=2224，M=16，efConstruction=500,efSearch=80
-        auto tmp_index = new faiss::IndexHNSWFlat(dim, 16, metric_type);
-        tmp_index->hnsw.efConstruction = 1000; // 提升一点，反正构建时间足够。
+        auto tmp_index = new faiss::IndexHNSWFlat(dim, 24, metric_type);
+        tmp_index->hnsw.efConstruction = 500; // 提升一点，反正构建时间足够。
         tmp_index->hnsw.efSearch = 80;
         index.reset(tmp_index);
 
