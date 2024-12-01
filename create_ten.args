@@ -1,0 +1,3 @@
+create resource unit unit_1 max_cpu 6, memory_size "10G", log_disk_size "10G";
+create resource pool pool_2 unit = 'unit_1', unit_num = 1, zone_list = ('zone1');
+create tenant perf replica_num = 1,primary_zone='zone1', resource_pool_list=('pool_2') set ob_tcp_invited_nodes='%';
