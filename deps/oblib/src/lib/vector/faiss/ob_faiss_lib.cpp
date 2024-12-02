@@ -241,7 +241,7 @@ int create_index(
     bool is_support = is_supported_index(index_type);
 
     if (is_support) {
-        // // omp_set_num_threads(8);
+        omp_set_num_threads(8);
         // create index
         std::shared_ptr<faiss::Index> index;
         std::shared_ptr<faiss::IndexIDMap> ix_id_map;
@@ -370,6 +370,16 @@ int get_index_number(VectorIndexPtr& index_handler, int64_t& size) {
     return 0;
 }
 
+void set_hnsw_efsearch(faiss::Index* i, int topk) {
+    if (auto x = dynamic_cast<faiss::IndexIDMap*>(i)) {
+        set_hnsw_efsearch(x->index, topk);
+    } else if (auto x = dynamic_cast<faiss::IndexHNSW*>(i)) {
+        x->hnsw.efSearch = topk >= 10000 ? 300 : 80;
+    } else {
+        assert(false);
+    }
+}
+
 int knn_search(
         VectorIndexPtr& index_handler,
         float* query_vector,
@@ -412,6 +422,7 @@ int knn_search(
         // omp_set_num_threads(8);
     }
 
+    set_hnsw_efsearch(index.get(), topk);
     int ret = 0;
     try {
         index->search(1, query_vector, topk, dist_result, ids_result);
