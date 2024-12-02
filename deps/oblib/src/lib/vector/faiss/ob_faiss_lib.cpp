@@ -261,7 +261,7 @@ int create_index(
                 false,
                 max_degree,
                 ef_construction,
-                ef_search,
+                6000,
                 dim,
                 index,
                 ix_id_map,
@@ -370,14 +370,16 @@ int get_index_number(VectorIndexPtr& index_handler, int64_t& size) {
     return 0;
 }
 
-void set_hnsw_efsearch(faiss::Index* i, int topk) {
+void set_hnsw_efsearch(faiss::Index* i, int topk, int ef_search) {
     if (auto x = dynamic_cast<faiss::IndexIDMap*>(i)) {
-        set_hnsw_efsearch(x->index, topk);
-    } else if (auto x = dynamic_cast<faiss::IndexHNSW*>(i)) {
-        x->hnsw.efSearch = topk >= 10000 ? 300 : 80;
-    } else {
-        assert(false);
+        set_hnsw_efsearch(x->index, topk, ef_search);
     }
+
+    if (auto x = dynamic_cast<faiss::IndexHNSW*>(i)) {
+        x->hnsw.efSearch = topk >= 10000 ? ef_search : 80;
+        return;
+    }
+    assert(false);
 }
 
 int knn_search(
@@ -419,10 +421,9 @@ int knn_search(
         }
         get_static_ids().clear();
         get_static_vector_list().clear();
-        // omp_set_num_threads(8);
     }
 
-    set_hnsw_efsearch(index.get(), topk);
+    set_hnsw_efsearch(index.get(), topk, 6000);
     int ret = 0;
     try {
         index->search(1, query_vector, topk, dist_result, ids_result);

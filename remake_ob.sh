@@ -1,3 +1,4 @@
+./tools/deploy/obd.sh stop -n obcluster
 rm -rf ./tools/deploy/.obd/repository/oceanbase-ce/4.3.3.1
 ./tools/deploy/obd.sh destroy -n obcluster --rm < ./destroy.args
 echo "remove respository"
