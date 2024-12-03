@@ -7,8 +7,7 @@ set (FMT_SYSTEM_HEADERS ON)
 
 FetchContent_Declare(
     fmt
-    URL # /home/user/oceanbase-2024/fmt-10.2.1.tar.gz
-        https://github.com/fmtlib/fmt/archive/refs/tags/10.2.1.tar.gz
+    URL https://github.com/fmtlib/fmt/archive/refs/tags/10.2.1.tar.gz
         # this url is maintained by the vsag project, if it's broken, please try
         #  the latest commit or contact the vsag project
         http://vsagcache.oss-rg-china-mainland.aliyuncs.com/fmt/10.2.1.tar.gz
@@ -22,7 +21,7 @@ FetchContent_Declare(
 FetchContent_GetProperties(fmt)
 if(NOT fmt_POPULATED)
   FetchContent_Populate(fmt)
-  add_subdirectory(${fmt_SOURCE_DIR} ${fmt_BINARY_DIR} EXCLUDE_FROM_ALL)
+  add_subdirectory(${fmt_SOURCE_DIR} ${fmt_BINARY_DIR})
 endif()
 
 include_directories(${fmt_SOURCE_DIR}/include)
