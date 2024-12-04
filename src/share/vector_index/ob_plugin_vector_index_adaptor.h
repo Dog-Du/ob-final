@@ -13,6 +13,7 @@
 #ifndef OCEANBASE_SHARE_PLUGIN_VECTOR_INDEX_ADAPTOR_H_
 #define OCEANBASE_SHARE_PLUGIN_VECTOR_INDEX_ADAPTOR_H_
 
+#include <cstdint>
 #include "common/object/ob_obj_type.h"
 #include "common/row/ob_row_iterator.h"
 #include "lib/oblog/ob_log_module.h"
@@ -148,11 +149,22 @@ enum ObVectorQueryProcessFlag {
 };
 
 struct ObVectorParamData {
+  ~ObVectorParamData() {
+    if (row_data_ != nullptr && row_length_ != 0 && count_ > 0) {
+      free(row_data_);
+    }
+    row_data_ = nullptr;
+    row_length_ = 0;
+    count_ = 0;
+  }
+
   int64_t dim_;
   int64_t count_;
   int64_t curr_idx_;
   ObObj *vectors_; // need do init by yourself
   ObObj *vids_;
+  char *row_data_ = nullptr;
+  uint32_t row_length_ = 0;
   static const int64_t VI_PARAM_DATA_BATCH_SIZE = 1000;
   TO_STRING_KV(K_(dim), K_(count), K_(curr_idx), KP_(vectors), KP_(vids));
 };
@@ -197,6 +209,9 @@ public:
     vec_data_.curr_idx_ += curr_cnt;
   }
 
+  void set_param_data(char *row_datas, uint32_t row_length) { vec_data_.row_data_ = row_datas; vec_data_.row_length_ = row_length; }
+
+  ObVectorParamData *get_param_data() { return &vec_data_; }
 private:
   PluginVectorQueryResStatus status_;
   ObVectorQueryProcessFlag flag_;
@@ -400,7 +415,8 @@ public:
                   const int64_t type_idx, const int64_t vector_idx,
                   const int64_t row_count);
 
-  int add_snap_index(float *vectors, int64_t *vids, int num);
+  // int add_snap_index(float *vectors, int64_t *vids, int num);
+  int add_snap_index(float *vectors, int64_t *vids, int num, char *datas, uint32_t row_length);
 
   // Query Processor first
   int check_delta_buffer_table_readnext_status(
@@ -616,10 +632,6 @@ public:
       mem_context_ = nullptr;
       all_vsag_use_mem_ = nullptr;
     }
-
-    for (auto p : ptr_set_) {
-      free(p);
-    }
   }
   int init(lib::MemoryContext &parent_mem_context, uint64_t *all_vsag_use_mem,
            uint64_t tenant_id);
@@ -637,7 +649,6 @@ public:
   int64_t used() { return mem_context_->used(); }
 
 private:
-  std::unordered_set<void *> ptr_set_;
   uint64_t *all_vsag_use_mem_;
   lib::MemoryContext mem_context_;
   constexpr static int64_t MEM_PTR_HEAD_SIZE = sizeof(int64_t);

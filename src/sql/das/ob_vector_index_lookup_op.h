@@ -122,6 +122,7 @@ private:
   int next_state(ObVidAdaLookupStatus& cur_states,
                   ObVectorQueryAdaptorResultContext& ada_ctx,
                   bool& is_continue);
+
   int set_lookup_vid_key();
   int set_lookup_vid_key(ObRowkey& doc_id_rowkey);
   int set_lookup_vid_keys(ObNewRow *row, int64_t count);

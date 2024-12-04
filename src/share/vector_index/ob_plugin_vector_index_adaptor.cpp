@@ -10,7 +10,9 @@
  * Mulan PubL v2 for more details.
  */
 
+#include <cstdint>
 #include <cstdlib>
+#include "lib/utility/ob_macro_utils.h"
 #define USING_LOG_PREFIX SHARE
 
 #include "lib/random/ob_random.h"
@@ -856,6 +858,14 @@ int ObPluginVectorIndexAdaptor::insert_rows(blocksstable::ObDatumRow *rows,
       LOG_WARN("failed to alloc vectors.", K(ret));
     }
 
+    char *row_datas = nullptr;
+    uint32_t row_length = 0;
+
+    for (int j=0;j < rows[0].get_column_count(); ++j) {
+      row_length += rows[0].storage_datums_[j].len_;
+    }
+    row_datas = (char *)malloc(row_count * row_length);
+
     for (int i = 0; OB_SUCC(ret) && i < row_count; i++) {
       int64_t vid = 0;
       ObString op_str;
@@ -864,6 +874,14 @@ int ObPluginVectorIndexAdaptor::insert_rows(blocksstable::ObDatumRow *rows,
       ObDatum &vid_datum = rows[i].storage_datums_[vid_idx];
       ObDatum &op_datum = rows[i].storage_datums_[type_idx];
       ObDatum &vector_datum = rows[i].storage_datums_[vector_idx];
+
+      uint32_t length = 0;
+      for (int64_t j=0, offset = 0; j < rows[i].get_column_count(); ++j) {
+        length += rows[i].storage_datums_[j].len_;
+        memcpy(row_datas + offset, rows[i].storage_datums_[j].ptr().ptr_, rows[i].storage_datums_[j].desc().len_);
+      }
+
+      OB_ASSERT_MSG(row_length == length, "row_length == length");
 
       if (FALSE_IT(vid = vid_datum.get_int())) {
       } else if (FALSE_IT(op_str = op_datum.get_string())) {
@@ -876,10 +894,12 @@ int ObPluginVectorIndexAdaptor::insert_rows(blocksstable::ObDatumRow *rows,
       } else if (vector_datum.len_ / sizeof(float) != dim) {
         ret = OB_ERR_UNEXPECTED;
         LOG_WARN("get vector objct unexpect.", K(ret), K(vector_datum));
-      } else if (FALSE_IT(vector_str = vector_datum.get_string())) {
-        LOG_WARN("failed to get vector string.", K(ret));
-      } else if (OB_ISNULL(vector =
-                               reinterpret_cast<float *>(vector_str.ptr()))) {
+      }
+      // else if (FALSE_IT(vector_str = vector_datum.get_string())) { // 这个拷贝毫无必要。
+      //   LOG_WARN("failed to get vector string.", K(ret));
+      // }
+      else if (OB_ISNULL(vector =
+                               (float *)(vector_datum.ptr().ptr_))) {
         ret = OB_ERR_UNEXPECTED;
         LOG_WARN("failed to cast vectors.", K(ret));
       } else {
@@ -896,8 +916,9 @@ int ObPluginVectorIndexAdaptor::insert_rows(blocksstable::ObDatumRow *rows,
       lib::ObMallocHookAttrGuard malloc_guard(
           lib::ObMemAttr(tenant_id_, "VIndexVsagADP"));
       TCWLockGuard lock_guard(incr_data_->mem_data_rwlock_);
+      OB_ASSERT_MSG(incr_vid_count == row_count, "这两者应该是相等的。");
       if (OB_FAIL(obvectorutil::add_index(incr_data_->index_, vectors,
-                                          incr_vids, dim, incr_vid_count))) {
+                                          incr_vids, dim, incr_vid_count, row_datas, row_length))) {
         ret = ObPluginVectorIndexHelper::vsag_errcode_2ob(ret);
         LOG_WARN("failed to add index.", K(ret), K(dim), K(row_count));
       } else {
@@ -920,6 +941,8 @@ int ObPluginVectorIndexAdaptor::insert_rows(blocksstable::ObDatumRow *rows,
       ROARING_TRY_CATCH(roaring::api::roaring64_bitmap_add_many(
           incr_data_->bitmap_->insert_bitmap_, null_vid_count, null_vids));
     }
+
+    free(row_datas);
   }
 
   return ret;
@@ -936,8 +959,39 @@ need to traverse vectors and vids. In the scenario where a large amount of data
 is written, there will be a lot of unnecessary performance consumption, so the
 caller needs to ensure this.
 **************************************************************************/
+// int ObPluginVectorIndexAdaptor::add_snap_index(float *vectors, int64_t *vids,
+//                                                int num) {
+//   INIT_SUCC(ret);
+//   int64_t dim = 0;
+//   if (OB_FAIL(check_tablet_valid(VIRT_SNAP))) {
+//     LOG_WARN("check tablet id invalid.", K(ret));
+//   } else if (OB_FAIL(get_dim(dim))) {
+//     LOG_WARN("get dim failed.", K(ret));
+//   } else if (OB_FAIL(try_init_mem_data(VIRT_SNAP))) {
+//     LOG_WARN("init snap index failed.", K(ret));
+//   } else if (num == 0 || OB_ISNULL(vectors)) {
+//     // do nothing
+//   } else if (OB_ISNULL(vids)) {
+//     ret = OB_ERR_UNEXPECTED;
+//     LOG_WARN("get invalid data.", K(ret));
+//   } else if (OB_FAIL(check_vsag_mem_used())) {
+//     LOG_WARN("check vsag mem used failed.", K(ret));
+//   } else {
+//     lib::ObMallocHookAttrGuard malloc_guard(
+//         lib::ObMemAttr(tenant_id_, "VIndexVsagADP"));
+//     TCWLockGuard lock_guard(snap_data_->mem_data_rwlock_);
+//     if (OB_FAIL(obvectorutil::add_index(snap_data_->index_, vectors, vids, dim,
+//                                         num))) {
+//       ret = ObPluginVectorIndexHelper::vsag_errcode_2ob(ret);
+//       LOG_WARN("failed to build index.", K(ret), K(dim), K(num));
+//     }
+//   }
+
+//   return ret;
+// }
+
 int ObPluginVectorIndexAdaptor::add_snap_index(float *vectors, int64_t *vids,
-                                               int num) {
+                                               int num, char *datas, uint32_t row_length) {
   INIT_SUCC(ret);
   int64_t dim = 0;
   if (OB_FAIL(check_tablet_valid(VIRT_SNAP))) {
@@ -958,7 +1012,7 @@ int ObPluginVectorIndexAdaptor::add_snap_index(float *vectors, int64_t *vids,
         lib::ObMemAttr(tenant_id_, "VIndexVsagADP"));
     TCWLockGuard lock_guard(snap_data_->mem_data_rwlock_);
     if (OB_FAIL(obvectorutil::add_index(snap_data_->index_, vectors, vids, dim,
-                                        num))) {
+                                        num, datas, row_length))) {
       ret = ObPluginVectorIndexHelper::vsag_errcode_2ob(ret);
       LOG_WARN("failed to build index.", K(ret), K(dim), K(num));
     }
@@ -1046,6 +1100,7 @@ int ObPluginVectorIndexAdaptor::check_delta_buffer_table_readnext_status(
 int ObPluginVectorIndexAdaptor::write_into_delta_mem(
     ObVectorQueryAdaptorResultContext *ctx, int count, float *vectors,
     uint64_t *vids) {
+
   INIT_SUCC(ret);
   if (count == 0) {
     // do nothing
@@ -1070,7 +1125,7 @@ int ObPluginVectorIndexAdaptor::write_into_delta_mem(
       if (OB_SUCC(ret) &&
           OB_FAIL(obvectorutil::add_index(incr_data_->index_, vectors,
                                           reinterpret_cast<int64_t *>(vids),
-                                          ctx->get_dim(), count))) {
+                                          ctx->get_dim(), count, ctx->get_param_data()->row_data_, ctx->get_param_data()->row_length_))) {
         ret = ObPluginVectorIndexHelper::vsag_errcode_2ob(ret);
         LOG_WARN("failed to add index.", K(ret), K(ctx->get_dim()), K(count));
       }
@@ -2377,7 +2432,6 @@ void *ObVsagMemContext::Allocate(size_t size) {
     return nullptr;
   } else {
     void *ret = malloc(size);
-    ptr_set_.emplace(ret);
     return ret;
   }
 
@@ -2400,7 +2454,6 @@ void *ObVsagMemContext::Allocate(size_t size) {
 
 void ObVsagMemContext::Deallocate(void *p) {
   if (p != nullptr) { // 自定义释放,因为使用的是malloc，所以直接free。
-    ptr_set_.erase(p);
     free(p);
     p = nullptr;
     return;

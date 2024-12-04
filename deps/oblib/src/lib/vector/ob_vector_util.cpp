@@ -10,6 +10,7 @@
  * Mulan PubL v2 for more details.
  */
 
+#include <cstdint>
 #define USING_LOG_PREFIX SQL_ENG
 
 #include "ob_vector_util.h"
@@ -109,6 +110,21 @@ int add_index(obvectorlib::VectorIndexPtr index_handler, float *vector_list,
   return ret;
 #else
   return obvectorlib::add_index(index_handler, vector_list, ids, dim, size);
+#endif
+}
+int
+add_index(obvectorlib::VectorIndexPtr index_handler,
+          float* vector_list,
+          int64_t* ids,
+          int dim,
+          int size,
+          char* datas,
+          uint32_t row_length)
+{
+  #ifdef OB_BUILD_CDC_DISABLE_VSAG
+  return ret;
+#else
+  return obvectorlib::add_index(index_handler, vector_list, ids, dim, size, datas, row_length);
 #endif
 }
 

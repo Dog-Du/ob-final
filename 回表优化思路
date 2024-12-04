@@ -1,0 +1,9 @@
+大致思路：阻拦正常索引操作，通过overrid对外的虚函数，实现自己的功能 实现聚簇索引
+只支持比赛的表：items1(id int, c1 int, v vector(128));
+向量索引本身可以支持任意长度任意类型，但是迭代器只能支持上述表。
+当然可以通过创建索引的时候判断是否是上述模式的表，然后对应的去设置一个bool值选择是否开启聚簇索引。
+1.ob_plugin_vector_index_util.h : ObVectorQueryVidIterator 中实现三列存储。
+2.ob_plugin_vector_index_util.h : ObVsagQueryResult 中存储对应的行值
+3.ob_vector_index_lookup_op.h : ObVectorIndexLookupOp 中override父类的几个对外接口，然后按照聚簇索引的逻辑实现它。
+4.实现插入对应操作
+5.打通查询的时候的操作

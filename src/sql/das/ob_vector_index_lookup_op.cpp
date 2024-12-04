@@ -114,6 +114,7 @@ int ObVectorIndexLookupOp::init(const ObDASBaseCtDef *table_lookup_ctdef,
       }
     }
   }
+  
   return ret;
 }
 
@@ -700,7 +701,7 @@ int ObVectorIndexLookupOp::prepare_state(const ObVidAdaLookupStatus& cur_state,
           storage::ObTableScanIterator *table_scan_iter = dynamic_cast<storage::ObTableScanIterator *>(storage_iter);
           ObString vector;
           blocksstable::ObDatumRow *datum_row = nullptr;
-          if (OB_FAIL(table_scan_iter->get_next_row(datum_row))) {
+          if (OB_FAIL(table_scan_iter->get_next_row(datum_row))) { // vector当做text存储，这里需要再查找一次。
             if (OB_ITER_END != ret) {
               LOG_WARN("failed to get next row from next table.", K(ret));
             } else {

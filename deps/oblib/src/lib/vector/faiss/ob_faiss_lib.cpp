@@ -13,6 +13,7 @@
 #include <omp.h>
 
 #include <omp.h>
+#include <stdio.h>
 #include <chrono>
 #include <cstdint>
 #include <cstring>
@@ -20,6 +21,7 @@
 #include <functional>
 #include <ios>
 #include <memory>
+#include <unordered_map>
 #include "faiss/impl/FaissException.h"
 #include "faiss/impl/HNSW.h"
 
@@ -77,6 +79,65 @@ class StreamReader : public faiss::IOReader {
 
    private:
     std::istream& in_stream_;
+};
+
+class RowDataHandler { // 对列数据进行简单的内存管理
+   public:
+    explicit RowDataHandler(const char* data, uint32_t length) {
+        if (length == 0) {
+            data_ = nullptr;
+            data_length_ = 0;
+            return;
+        }
+
+        data_length_ = length;
+        data_ = (char*)malloc(data_length_);
+
+        if (data != nullptr) { // 如果 data == nullptr，只申请空间，不进行拷贝
+            memcpy(data_, data, data_length_);
+        }
+    }
+
+    ~RowDataHandler() {
+        if (data_ != nullptr) {
+            free(data_);
+        }
+        data_ = nullptr;
+        data_length_ = 0;
+    }
+
+    RowDataHandler(const RowDataHandler& rhs) = delete;
+
+    RowDataHandler& operator=(RowDataHandler&& rhs) {
+        if (this == &rhs) {
+            return *this;
+        }
+
+        this->~RowDataHandler();
+        data_ = rhs.data_;
+        data_length_ = rhs.data_length_;
+        rhs.data_ = nullptr;
+        rhs.data_length_ = 0;
+        return *this;
+    }
+
+    RowDataHandler(RowDataHandler&& rhs) {
+        data_ = rhs.data_;
+        data_length_ = rhs.data_length_;
+        rhs.data_ = nullptr;
+        rhs.data_length_ = 0;
+    }
+
+    uint32_t get_length() const {
+        return data_length_;
+    }
+    char* data() const {
+        return data_;
+    }
+
+   private:
+    char* data_ = nullptr;
+    uint32_t data_length_;
 };
 
 class HnswIndexHandler {
@@ -159,6 +220,7 @@ class HnswIndexHandler {
     std::shared_ptr<faiss::Index> index_;
     std::shared_ptr<faiss::IndexIDMap> ix_id_map_;
     std::shared_ptr<faiss::IndexFlatL2> quantizer_;
+    std::unordered_map<int64_t, RowDataHandler> id_data_map_;
 };
 
 bool& get_init() {
@@ -241,7 +303,7 @@ int create_index(
     bool is_support = is_supported_index(index_type);
 
     if (is_support) {
-        omp_set_num_threads(8);
+        omp_set_num_threads(12);
         // create index
         std::shared_ptr<faiss::Index> index;
         std::shared_ptr<faiss::IndexIDMap> ix_id_map;
@@ -310,6 +372,8 @@ int add_index(
         int64_t* ids,
         int dim,
         int size) {
+    return 1; // 这个函数不再使用。
+
     HnswIndexHandler* hnsw_handler =
             static_cast<HnswIndexHandler*>(index_handler);
     auto& index = hnsw_handler->get_index();
@@ -361,6 +425,72 @@ int add_index(
     return ret;
 }
 
+int add_index(
+        VectorIndexPtr& index_handler,
+        float* vector,
+        int64_t* ids,
+        int dim,
+        int size,
+        char* datas,
+        uint32_t data_length) {
+    HnswIndexHandler* hnsw_handler =
+            static_cast<HnswIndexHandler*>(index_handler);
+    auto& index = hnsw_handler->get_index();
+
+    for (int i = 0, offset = 0; i < size; ++i) {
+        RowDataHandler handler(datas + offset, data_length);
+        hnsw_handler->id_data_map_.emplace(ids[i], std::move(handler));
+        offset += data_length;
+    }
+
+    if (!get_init()) {
+        for (int64_t i = 0, n = 1LL * size * dim; i < n; ++i) {
+            get_static_vector_list().push_back(vector[i]);
+        }
+
+        for (int64_t i = 0; i < size; ++i) {
+            get_static_ids().push_back(ids[i]);
+        }
+
+        if (get_static_ids().size() >= 1000'000) {
+            assert(get_static_ids().size() * hnsw_handler->get_dim() ==
+                   get_static_vector_list().size());
+
+            try {
+                if (!index->is_trained) {
+                    index->train(
+                            get_static_ids().size(),
+                            get_static_vector_list().data());
+                }
+
+                index->add_with_ids(
+                        get_static_ids().size(),
+                        get_static_vector_list().data(),
+                        get_static_ids().data());
+            } catch (faiss::FaissException& e) {
+                std::cout << e.what() << std::endl;
+                return static_cast<int>(ErrorType::UNKNOWN_ERROR);
+            }
+            get_static_ids().clear();
+            get_static_vector_list().clear();
+            // omp_set_num_threads(8);
+            assert(index->ntotal >= 1000'000);
+            get_init() = true;
+            assert(hnsw_handler->id_data_map_.size() == index->ntotal);
+        }
+
+        return 0;
+    }
+
+    int ret = 0;
+    try {
+        index->add_with_ids(size, vector, ids);
+    } catch (...) {
+        ret = static_cast<int>(ErrorType::UNKNOWN_ERROR);
+    }
+    return ret;
+}
+
 int get_index_number(VectorIndexPtr& index_handler, int64_t& size) {
     if (index_handler == nullptr) {
         return static_cast<int>(ErrorType::UNKNOWN_ERROR);
@@ -373,13 +503,11 @@ int get_index_number(VectorIndexPtr& index_handler, int64_t& size) {
 void set_hnsw_efsearch(faiss::Index* i, int topk, int ef_search) {
     if (auto x = dynamic_cast<faiss::IndexIDMap*>(i)) {
         set_hnsw_efsearch(x->index, topk, ef_search);
-    }
-
-    if (auto x = dynamic_cast<faiss::IndexHNSW*>(i)) {
+    } else if (auto x = dynamic_cast<faiss::IndexHNSW*>(i)) {
         x->hnsw.efSearch = topk >= 10000 ? ef_search : 80;
-        return;
+    } else {
+        assert(false);
     }
-    assert(false);
 }
 
 int knn_search(
@@ -421,8 +549,10 @@ int knn_search(
         }
         get_static_ids().clear();
         get_static_vector_list().clear();
+        assert(hnsw_handler->id_data_map_.size() == index->ntotal);
     }
 
+    assert(hnsw_handler->id_data_map_.size() == index->ntotal);
     set_hnsw_efsearch(index.get(), topk, 6000);
     int ret = 0;
     try {
@@ -445,6 +575,153 @@ int knn_search(
     dist = dist_result;
     ids = ids_result;
     return ret;
+}
+
+int knn_search(
+        VectorIndexPtr& index_handler,
+        float* query_vector,
+        int dim,
+        int64_t topk,
+        const float*& dist,
+        const int64_t*& ids,
+        int64_t& result_size,
+        int ef_search,
+        char*& row_datas,
+        uint32_t& row_length) {
+    HnswIndexHandler* hnsw_handler =
+            static_cast<HnswIndexHandler*>(index_handler);
+    auto& index = hnsw_handler->get_index();
+
+    // 使用malloc而不是使用new的原因：在适配层，会给与一个内存池分配，他会进行内存释放。
+    // 但是这里的内存是自己使用的，为了防止内存泄漏，使用malloc和free，而不是new和delete
+    float* dist_result = (float*)malloc(sizeof(float) * topk);
+    int64_t* ids_result = (int64_t*)malloc(sizeof(int64_t) * topk);
+
+    if (!get_static_ids().empty()) {
+        assert(get_static_ids().size() * hnsw_handler->get_dim() ==
+               get_static_vector_list().size());
+
+        try {
+            if (!index->is_trained) {
+                index->train(
+                        get_static_ids().size(),
+                        get_static_vector_list().data());
+            }
+            index->add_with_ids(
+                    get_static_ids().size(),
+                    get_static_vector_list().data(),
+                    get_static_ids().data());
+        } catch (faiss::FaissException& e) {
+            std::cout << e.what() << std::endl;
+            return static_cast<int>(ErrorType::UNKNOWN_ERROR);
+        }
+        get_static_ids().clear();
+        get_static_vector_list().clear();
+        assert(hnsw_handler->id_data_map_.size() == index->ntotal);
+    }
+
+    assert(hnsw_handler->id_data_map_.size() == index->ntotal);
+    set_hnsw_efsearch(index.get(), topk, 6000);
+    int ret = 0;
+    try {
+        index->search(1, query_vector, topk, dist_result, ids_result);
+    } catch (faiss::FaissException& e) {
+        std::cout << e.what() << std::endl;
+        free(dist_result);
+        free(ids_result);
+        return static_cast<int>(ErrorType::UNKNOWN_ERROR);
+    }
+
+    result_size = 0;
+    for (int64_t i = topk - 1; i >= 0; --i) {
+        if (ids_result[i] != -1) {
+            result_size = i + 1;
+            break;
+        }
+    }
+
+    dist = dist_result;
+    ids = ids_result;
+
+    row_datas = nullptr;
+    row_length = 0;
+
+    if (result_size > 0) {
+        auto iter = hnsw_handler->id_data_map_.begin();
+        row_length = iter->second.get_length();
+        row_datas = (char*)malloc(result_size * row_length);
+        for (int64_t i = 0, offset = 0; i < result_size; ++i) {
+            iter = hnsw_handler->id_data_map_.find(ids[i]);
+            memcpy(row_datas + offset, iter->second.data(), row_length);
+            offset += row_length;
+        }
+    }
+    return ret;
+}
+
+void serialize_data_map(
+        std::unordered_map<int64_t, RowDataHandler>& map,
+        StreamWriter& writer) {
+    if (map.empty()) {
+        uint64_t size = map.size();
+        uint32_t length = 0;
+        assert(writer(&size, sizeof(size), 1) == 1);
+        return;
+    }
+
+    uint64_t size = map.size();
+    int64_t id = 0;
+    uint32_t row_length = map.begin()->second.get_length();
+    uint32_t length = row_length + sizeof(id);
+
+    RowDataHandler all_data(
+            nullptr, size * length + sizeof(size) + sizeof(length));
+
+    int64_t offset = 0;
+    memcpy(all_data.data() + offset, &size, sizeof(size));
+    offset += sizeof(size);
+    memcpy(all_data.data() + offset, &length, sizeof(length));
+    offset += sizeof(length);
+
+    for (auto& kv : map) {
+        memcpy(all_data.data() + offset, &kv.first, sizeof(kv.first));
+        offset += sizeof(kv.first);
+        memcpy(all_data.data() + offset, kv.second.data(), row_length);
+        offset += row_length;
+    }
+
+    assert(offset == all_data.get_length());
+    assert(writer(all_data.data(), all_data.get_length(), 1) == 1);
+}
+
+void deserialize_data_map(
+        std::unordered_map<int64_t, RowDataHandler>& map,
+        StreamReader& reader) {
+    uint64_t size = 0;
+    int64_t id = 0;
+    uint32_t length = 0;
+    uint32_t row_length = 0;
+
+    assert(reader(&size, sizeof(size), 1) == 1);
+
+    if (size == 0) {
+        return;
+    }
+
+    assert(reader(&length, sizeof(length), 1) == 1);
+    row_length = length - sizeof(id);
+
+    RowDataHandler all_data(nullptr, length * size);
+    assert(reader(all_data.data(), all_data.get_length(), 1) == 1);
+    int64_t offset = 0;
+
+    for (int64_t i = 0; i < size; ++i) {
+        memcpy(&id, all_data.data() + offset, sizeof(id));
+        offset += sizeof(id);
+        RowDataHandler row_handler(all_data.data() + offset, row_length);
+        offset += row_length;
+        map.emplace(id, std::move(row_handler));
+    }
 }
 
 int serialize(VectorIndexPtr& index_handler, const std::string dir) {
@@ -487,9 +764,11 @@ int fserialize(VectorIndexPtr& index_handler, std::ostream& out_stream) {
         // omp_set_num_threads(8);
     }
 
+    assert(hnsw_handler->id_data_map_.size() == index->ntotal);
     StreamWriter writer(out_stream);
     int ret = 0;
     try {
+        serialize_data_map(hnsw_handler->id_data_map_, writer);
         faiss::write_index(index.get(), &writer);
     } catch (faiss::FaissException& e) {
         std::cout << e.what() << std::endl;
@@ -524,6 +803,7 @@ int fdeserialize(VectorIndexPtr& index_handler, std::istream& in_stream) {
 
     StreamReader reader(in_stream);
     try {
+        deserialize_data_map(hnsw_handler->id_data_map_, reader);
         faiss::Index* i = faiss::read_index(&reader);
 
         if (auto x = dynamic_cast<faiss::IndexIDMap*>(i)) {
@@ -536,6 +816,7 @@ int fdeserialize(VectorIndexPtr& index_handler, std::istream& in_stream) {
         ret = static_cast<int>(ErrorType::UNKNOWN_ERROR);
     }
 
+    assert(hnsw_handler->id_data_map_.size() == index->ntotal);
     return ret;
 }
 

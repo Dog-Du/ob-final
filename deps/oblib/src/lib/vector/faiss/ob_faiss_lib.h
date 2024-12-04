@@ -2,9 +2,9 @@
 #define OB_FAISS_LIB_H
 
 #include <stdint.h>
+#include <cstdint>
 #include <iostream>
 #include <map>
-
 
 namespace obvectorlib {
 
@@ -68,6 +68,16 @@ extern int add_index(
         int64_t* ids,
         int dim,
         int size);
+
+extern int add_index(
+        VectorIndexPtr& index_handler,
+        float* vector,
+        int64_t* ids,
+        int dim,
+        int size,
+        char* datas,
+        uint32_t data_length);
+
 extern int get_index_number(VectorIndexPtr& index_handler, int64_t& size);
 extern int knn_search(
         VectorIndexPtr& index_handler,
@@ -79,6 +89,19 @@ extern int knn_search(
         int64_t& result_size,
         int ef_search,
         void* invalid = NULL);
+
+extern int knn_search(
+        VectorIndexPtr& index_handler,
+        float* query_vector,
+        int dim,
+        int64_t topk,
+        const float*& dist,
+        const int64_t*& ids,
+        int64_t& result_size,
+        int ef_search,
+        char*& row_datas,
+        uint32_t& row_length);
+
 extern int serialize(VectorIndexPtr& index_handler, const std::string dir);
 extern int deserialize_bin(
         VectorIndexPtr& index_handler,

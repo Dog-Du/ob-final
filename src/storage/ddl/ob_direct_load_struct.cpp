@@ -10,6 +10,8 @@
  * See the Mulan PubL v2 for more details.
  */
 
+#include <cstdint>
+#include <cstdlib>
 #define USING_LOG_PREFIX STORAGE
 
 #include "ob_direct_load_struct.h"
@@ -2191,6 +2193,20 @@ int ObVectorIndexSliceStore::append_row(const blocksstable::ObDatumRow &datum_ro
       // get vid and vector
       ObString vec_str;
       int64_t vec_vid;
+
+      char *row_data = nullptr;
+      uint32_t length = 0;
+
+      for (int64_t i=0; i< datum_row.get_column_count();++i) {
+        length += datum_row.storage_datums_[i].len_;
+      }
+
+      row_data = (char *)malloc(length);
+
+      for (int64_t i=0,offset = 0;i<datum_row.get_column_count();++i) {
+        memcpy(row_data, datum_row.storage_datums_[i].ptr().ptr_, datum_row.storage_datums_[i].len_);
+      }
+
       if (datum_row.get_column_count() <= vector_vid_col_idx_ || datum_row.get_column_count() <= vector_col_idx_) {
         ret = OB_ERR_UNEXPECTED;
         LOG_WARN("failed to get valid vector index col idx", K(ret), K(vector_col_idx_), K(vector_vid_col_idx_), K(datum_row));
@@ -2202,11 +2218,13 @@ int ObVectorIndexSliceStore::append_row(const blocksstable::ObDatumRow &datum_ro
                                                                     true,
                                                                     vec_str))) {
         LOG_WARN("fail to get real data.", K(ret), K(vec_str));
-      } else if (OB_FAIL(adaptor_guard.get_adatper()->add_snap_index(reinterpret_cast<float*>(vec_str.ptr()), &vec_vid, 1))) {
+      } else if (OB_FAIL(adaptor_guard.get_adatper()->add_snap_index(reinterpret_cast<float*>(vec_str.ptr()), &vec_vid, 1, row_data, length))) {
         LOG_WARN("fail to build index to adaptor", K(ret), KPC(this));
       } else {
         LOG_INFO("[vec index debug] add into snap index success", K(tablet_id_), K(vec_vid), K(vec_str));
       }
+
+      free(row_data);
     }
   }
   tmp_allocator_.reuse();

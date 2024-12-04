@@ -59,6 +59,7 @@ public:
   {
   }
 
+/*-------好像实际上对外接口只有这几个，也就是说，我只要在ob_vector_index_lookup_op里面把这几个函数给override并且完善之后就可以了-----------------------------*/
   int init(const ObDASScanCtDef *lookup_ctdef,
            ObDASScanRtDef *lookup_rtdef,
            const ObDASScanCtDef *index_ctdef,
@@ -77,6 +78,9 @@ public:
   virtual int revert_iter() override;
   virtual int reuse_scan_iter();
   ObITabletScan& get_tsc_service() { return *(MTL(ObAccessService *)); }
+/*----------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+
 protected:
   virtual int init_scan_param() override { return ObLocalIndexLookupOp::init_scan_param(); }
 protected:
