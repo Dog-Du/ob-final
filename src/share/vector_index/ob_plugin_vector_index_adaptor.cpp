@@ -908,7 +908,7 @@ ObPluginVectorIndexAdaptor::insert_rows(blocksstable::ObDatumRow* rows,
 
         char* row_datas = nullptr;
         uint32_t row_length = 0;
-
+        int64_t offset = 0;
         for (int j = 0; j < rows[0].get_column_count(); ++j) {
             row_length += rows[0].storage_datums_[j].len_;
         }
@@ -924,14 +924,16 @@ ObPluginVectorIndexAdaptor::insert_rows(blocksstable::ObDatumRow* rows,
             ObDatum& vector_datum = rows[i].storage_datums_[vector_idx];
 
             uint32_t length = 0;
-            for (int64_t j = 0, offset = 0; j < rows[i].get_column_count(); ++j) {
+            for (int64_t j = 0; j < rows[i].get_column_count(); ++j) {
                 length += rows[i].storage_datums_[j].len_;
                 memcpy(row_datas + offset,
                        rows[i].storage_datums_[j].ptr().ptr_,
                        rows[i].storage_datums_[j].desc().len_);
+                offset += rows[i].storage_datums_[j].len_;
             }
 
             OB_ASSERT_MSG(row_length == length, "row_length == length");
+            OB_ASSERT_MSG(offset == row_length * (i + 1), "offset == row_length * (i + 1)");
 
             if (FALSE_IT(vid = vid_datum.get_int())) {
             } else if (FALSE_IT(op_str = op_datum.get_string())) {

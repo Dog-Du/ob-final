@@ -159,7 +159,7 @@ struct ObVectorParamData {
   int64_t curr_idx_;
   ObObj *vectors_; // need do init by yourself
   ObObj *vids_;
-  char **row_data_ = nullptr;
+  char *row_data_ = nullptr;
   uint32_t row_length_ = 0;
   static const int64_t VI_PARAM_DATA_BATCH_SIZE = 1000;
   TO_STRING_KV(K_(dim), K_(count), K_(curr_idx), KP_(vectors), KP_(vids));

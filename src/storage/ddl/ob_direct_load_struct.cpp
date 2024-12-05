@@ -2196,6 +2196,7 @@ int ObVectorIndexSliceStore::append_row(const blocksstable::ObDatumRow &datum_ro
 
       char *row_data = nullptr;
       uint32_t length = 0;
+      int64_t offset = 0;
 
       for (int64_t i=0; i< datum_row.get_column_count();++i) {
         length += datum_row.storage_datums_[i].len_;
@@ -2203,10 +2204,12 @@ int ObVectorIndexSliceStore::append_row(const blocksstable::ObDatumRow &datum_ro
 
       row_data = (char *)malloc(length);
 
-      for (int64_t i=0,offset = 0;i<datum_row.get_column_count();++i) {
-        memcpy(row_data, datum_row.storage_datums_[i].ptr().ptr_, datum_row.storage_datums_[i].len_);
+      for (int64_t i=0;i < datum_row.get_column_count();++i) {
+        memcpy(row_data + offset, datum_row.storage_datums_[i].ptr().ptr_, datum_row.storage_datums_[i].len_);
+        offset += datum_row.storage_datums_[i].len_;
       }
 
+      OB_ASSERT_MSG(offset == length, "offset == length");
       if (datum_row.get_column_count() <= vector_vid_col_idx_ || datum_row.get_column_count() <= vector_col_idx_) {
         ret = OB_ERR_UNEXPECTED;
         LOG_WARN("failed to get valid vector index col idx", K(ret), K(vector_col_idx_), K(vector_vid_col_idx_), K(datum_row));
