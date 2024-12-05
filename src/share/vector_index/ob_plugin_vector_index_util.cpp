@@ -12,6 +12,8 @@
  */
 
 #include <cstdint>
+
+#include "object/ob_obj_type.h"
 #include "object/ob_object.h"
 #define USING_LOG_PREFIX SHARE
 
@@ -28,7 +30,7 @@ ObVectorQueryVidIterator::init() {
     if (OB_ISNULL(row_ = static_cast<ObNewRow*>(allocator_->alloc(sizeof(ObNewRow))))) {
         ret = OB_ALLOCATE_MEMORY_FAILED;
         LOG_WARN("failed to allocator NewRow.", K(ret));
-    } else if (OB_ISNULL(obj_ = static_cast<ObObj*>(allocator_->alloc(sizeof(ObObj))))) {  //
+    } else if (OB_ISNULL(obj_ = new ObObj[3])) {
         ret = OB_ALLOCATE_MEMORY_FAILED;
         LOG_WARN("failed to allocator NewRow.", K(ret));
     } else {
@@ -39,7 +41,7 @@ ObVectorQueryVidIterator::init() {
 
 int
 ObVectorQueryVidIterator::init(
-    int64_t total, int64_t* vids, ObIAllocator* allocator, char* row_data, uint32_t row_length) {
+    int64_t total, int64_t* vids, ObIAllocator* allocator, char** row_data, uint32_t row_length) {
     INIT_SUCC(ret);
     if ((OB_ISNULL(vids) && total != 0) || OB_ISNULL(allocator)) {
         ret = OB_INVALID_ARGUMENT;
@@ -47,7 +49,7 @@ ObVectorQueryVidIterator::init(
     } else if (OB_ISNULL(row_ = OB_NEWx(ObNewRow, allocator))) {
         ret = OB_ALLOCATE_MEMORY_FAILED;
         LOG_WARN("failed to allocator NewRow.", K(ret));
-    } else if (OB_ISNULL(obj_ = OB_NEWx(ObObj, allocator))) {
+    } else if (OB_ISNULL(obj_ = new ObObj[3])) {
         ret = OB_ALLOCATE_MEMORY_FAILED;
         LOG_WARN("failed to allocator NewRow.", K(ret));
     } else {
@@ -56,23 +58,37 @@ ObVectorQueryVidIterator::init(
         cur_pos_ = 0;
         vids_ = vids;
         allocator_ = allocator;
+
+        row_data_ = row_data;
+        row_length_ = row_length;
     }
     return ret;
 }
 
 int
 ObVectorQueryVidIterator::get_next_row(ObNewRow*& row) {
+    const int64_t C1_OFFSET = 20 + 4;
+    const int64_t VECTOR_OFFSET = C1_OFFSET + 4;
+    const int64_t VECTOR_DELTA = VECTOR_OFFSET;
+
     INIT_SUCC(ret);
     if (!is_init_) {
         ret = OB_NOT_INIT;
         LOG_WARN("iter is not initialized.", K(ret));
     } else if (cur_pos_ < total_) {
         obj_[0].reset();
+        obj_[1].reset();
+        obj_[2].reset();
         row_->reset();
 
-        obj_[0].set_int(vids_[cur_pos_++]);
+        obj_[0].set_int(vids_[cur_pos_]);
+        obj_[1].set_int(*(int32_t*)(row_data_[cur_pos_] + C1_OFFSET));
+        obj_[2].set_string(
+            common::ObVarcharType, row_data_[cur_pos_] + VECTOR_OFFSET, row_length_ - VECTOR_DELTA);
+
+        cur_pos_++;
         row_->cells_ = obj_;
-        row_->count_ = 1;
+        row_->count_ = 3;
         row_->projector_ = NULL;
         row_->projector_size_ = 0;
 
@@ -85,6 +101,10 @@ ObVectorQueryVidIterator::get_next_row(ObNewRow*& row) {
 
 int
 ObVectorQueryVidIterator::get_next_rows(ObNewRow*& row, int64_t& size) {
+    const int64_t C1_OFFSET = 20 + 4;
+    const int64_t VECTOR_OFFSET = C1_OFFSET + 4;
+    const int64_t VECTOR_DELTA = VECTOR_OFFSET;
+
     INIT_SUCC(ret);
     if (!is_init_) {
         ret = OB_NOT_INIT;
@@ -94,22 +114,38 @@ ObVectorQueryVidIterator::get_next_rows(ObNewRow*& row, int64_t& size) {
         row = nullptr;
         ObObj* obj = nullptr;
         if (batch_size_ > 0) {
-            if (OB_ISNULL(row = static_cast<ObNewRow*>(allocator_->alloc(sizeof(ObNewRow))))) {
+            if (OB_ISNULL(row = static_cast<ObNewRow*>(
+                              allocator_->alloc(sizeof(ObNewRow) * batch_size_)))) {
                 ret = OB_ALLOCATE_MEMORY_FAILED;
                 LOG_WARN("failed to allocator NewRow.", K(ret));
             } else if (OB_ISNULL(obj = static_cast<ObObj*>(
-                                     allocator_->alloc(sizeof(ObObj) * batch_size_)))) {
+                                     allocator_->alloc(sizeof(ObObj) * batch_size_ * 3)))) {
                 ret = OB_ALLOCATE_MEMORY_FAILED;
                 LOG_WARN("failed to allocator NewRow.", K(ret));
             } else {
                 int64_t index = 0;
                 for (; index < batch_size_ && cur_pos_ < total_; ++index) {
-                    obj[index].set_int(vids_[cur_pos_++]);
+                    // obj[index].set_int(vids_[cur_pos_++]);
+
+                    obj[index * 3 + 0].set_int(vids_[cur_pos_]);
+                    obj[index * 3 + 1].set_int(
+                        *(int32_t*)(row_data_[cur_pos_] + C1_OFFSET));
+                    obj[index * 3 + 2].set_string(
+                        common::ObVarcharType,
+                        row_data_[cur_pos_] + VECTOR_OFFSET,
+                        row_length_ - VECTOR_DELTA);
+
+                    cur_pos_++;
+                    row[index].cells_ = &obj[index * 3 + 0];
+                    row[index].count_ = 3;
+                    row[index].projector_ = NULL;
+                    row[index].projector_size_ = 0;
                 }
-                row->cells_ = obj;
-                row->count_ = index;
-                row->projector_ = NULL;
-                row->projector_size_ = 0;
+
+                // row->cells_ = obj;
+                // row->count_ = index;
+                // row->projector_ = NULL;
+                // row->projector_size_ = 0;
                 size = index;
             }
         }
@@ -133,7 +169,7 @@ ObPluginVectorIndexHelper::merge_delta_and_snap_vids(const ObVsagQueryResult& fi
                                                      const int64_t total,
                                                      int64_t& actual_cnt,
                                                      int64_t*& vids_result,
-                                                     char *row_datas,
+                                                     char** row_datas,
                                                      uint32_t row_length) {
     INIT_SUCC(ret);
     actual_cnt = 0;
@@ -141,45 +177,41 @@ ObPluginVectorIndexHelper::merge_delta_and_snap_vids(const ObVsagQueryResult& fi
     if (first.total_ == 0) {
         while (res_num < total && res_num < second.total_) {
             vids_result[res_num] = second.vids_[res_num];
+            row_datas[res_num] = second.row_datas_[res_num];
             res_num++;
         }
-        memcpy(row_datas, second.row_datas_, res_num * row_length);
         actual_cnt = res_num;
     } else if (second.total_ == 0) {
         while (res_num < total && res_num < first.total_) {
             vids_result[res_num] = first.vids_[res_num];
+            row_datas[res_num] = first.row_datas_[res_num];
             res_num++;
         }
-        memcpy(row_datas, first.row_datas_, res_num * row_length);
         actual_cnt = res_num;
     } else if (OB_ISNULL(first.vids_) || OB_ISNULL(second.vids_)) {
         ret = OB_ERR_UNEXPECTED;
         LOG_WARN("get vids invalid.", K(ret), K(first.vids_), K(second.vids_));
     } else {
         int64_t i = 0, j = 0;
-        int64_t offset = 0;
 
         while (res_num < total && i < first.total_ && j < second.total_) {
             if (first.distances_[i] <= second.distances_[j]) {
-                vids_result[res_num++] = first.vids_[i++];
-                memcpy(row_datas + offset, first.row_datas_ + i * row_length, row_length);
+                vids_result[res_num] = first.vids_[i];
+                row_datas[res_num++] = first.row_datas_[i++];
             } else {
-                vids_result[res_num++] = second.vids_[j++];
-                memcpy(row_datas + offset, second.row_datas_ + j * row_length, row_length);
+                vids_result[res_num] = second.vids_[j];
+                row_datas[res_num++] = second.row_datas_[j++];
             }
-            offset += row_length;
         }
 
         while (res_num < total && i < first.total_) {
-            vids_result[res_num++] = first.vids_[i++];
-            memcpy(row_datas + offset, first.row_datas_ + i * row_length, row_length);
-            offset += row_length;
+            vids_result[res_num] = first.vids_[i];
+            row_datas[res_num++] = first.row_datas_[i++];
         }
 
         while (res_num < total && j < second.total_) {
-            vids_result[res_num++] = second.vids_[j++];
-            memcpy(row_datas + offset, second.row_datas_ + j * row_length, row_length);
-            offset += row_length;
+            vids_result[res_num] = second.vids_[j];
+            row_datas[res_num++] = second.row_datas_[j++];
         }
 
         actual_cnt = res_num;

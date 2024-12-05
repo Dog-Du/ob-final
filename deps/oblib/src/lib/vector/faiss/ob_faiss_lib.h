@@ -99,7 +99,7 @@ extern int knn_search(
         const int64_t*& ids,
         int64_t& result_size,
         int ef_search,
-        char*& row_datas,
+        char**& row_datas,
         uint32_t& row_length);
 
 extern int serialize(VectorIndexPtr& index_handler, const std::string dir);

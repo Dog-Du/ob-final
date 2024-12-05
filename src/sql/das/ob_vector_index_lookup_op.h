@@ -109,6 +109,7 @@ protected:
   virtual int get_aux_table_rowkey() override;
   virtual int get_aux_table_rowkeys(const int64_t lookup_row_cnt) override;
 private:
+  // int next_state() override;
   int init_delta_buffer_scan_param();
   int init_index_id_scan_param();
   int init_snapshot_scan_param();

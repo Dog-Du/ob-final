@@ -355,6 +355,10 @@ private:
   int64_t memstore_read_row_cnt_;
 };
 
+// 哦，我明白大概流程了。
+// 1. 通过适配层去vector index找vids
+// 2. 通过ob_domain_index_lookup_op找对应tuple
+// 3. 通过ob_local_index_lookup_op来迭代对应的tuple（通过get_next_row)
 class ObLocalIndexLookupOp : public common::ObNewRowIterator, public ObIndexLookupOpImpl
 {
 public:

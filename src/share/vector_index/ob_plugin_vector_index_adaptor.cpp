@@ -1764,12 +1764,12 @@ ObPluginVectorIndexAdaptor::vsag_query_vids(ObVectorQueryAdaptorResultContext* c
     const float* snap_distances = nullptr;
     int64_t delta_res_cnt = 0;
     int64_t snap_res_cnt = 0;
-    char* delta_row_datas = nullptr;
-    char* snap_row_datas = nullptr;
+    char** delta_row_datas = nullptr;
+    char** snap_row_datas = nullptr;
     uint32_t delta_row_length = 0;
     uint32_t snap_row_length = 0;
 
-    char* merge_row_datas = nullptr;
+    char** merge_row_datas = nullptr;
     uint32_t merge_row_length = 0;
 
     if (OB_FAIL(check_vsag_mem_used())) {
@@ -1865,10 +1865,10 @@ ObPluginVectorIndexAdaptor::vsag_query_vids(ObVectorQueryAdaptorResultContext* c
                                  (sizeof(int64_t) * max_res_cnt)))) {
             ret = OB_ALLOCATE_MEMORY_FAILED;
             LOG_WARN("failed to allocator merge vids.", K(ret));
-        } else if (merge_row_length * max_res_cnt > 0 && OB_ISNULL(merge_row_datas = static_cast<char*>(
+        } else if (merge_row_length * max_res_cnt > 0 && OB_ISNULL(merge_row_datas = static_cast<char**>(
                                  ctx->allocator_->alloc /*can't use tmp allocator here,
                                                  its final result of query*/
-                                 (merge_row_length * max_res_cnt)))) {
+                                 (sizeof(char*) * max_res_cnt)))) {
             ret = OB_ALLOCATE_MEMORY_FAILED;
             LOG_WARN("failed to allocator merge row_datas.", K(ret));
         } else if (OB_FAIL(ObPluginVectorIndexHelper::merge_delta_and_snap_vids(

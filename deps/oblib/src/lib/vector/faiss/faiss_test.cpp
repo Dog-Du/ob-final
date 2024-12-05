@@ -41,7 +41,7 @@ void generate_vector_list(
 
 void generate_data_row(char* data, uint32_t length) {
     for (uint32_t i = 0; i < length; ++i) {
-        data[i] = r() % 256;
+        data[i] = r() % ('z' - 'a') + 'a';
     }
 }
 
@@ -68,11 +68,11 @@ void free_datas(char**& data, uint32_t*& length, int n) {
 int main() {
     obvectorlib::VectorIndexPtr index_handler;
     int64_t dim = 128;
-    int64_t size = 1000'000;
+    int64_t size = 1000;
     int64_t index_size;
     int64_t topk = 10;
     char* data = nullptr;
-    uint32_t length = 100;
+    uint32_t length = 5;
 
     std::vector<float> vector_list;
     std::vector<int64_t> ids;
@@ -219,7 +219,7 @@ int main() {
         const float* dist = nullptr;
         const int64_t* ids = nullptr;
         int64_t result_size = 0;
-        char* data = nullptr;
+        char** data = nullptr;
         uint32_t data_length = 0;
 
         assert(obvectorlib::knn_search(
@@ -236,7 +236,7 @@ int main() {
 
         std::cout << "query result size : " << result_size << " :: ";
         for (int64_t j = 0; j < result_size; ++j) {
-            std::cout << ids[j] << ' ';
+            std::cout << ids[j] << " ::: " << std::string(data[j], data_length) << "   ";
         }
         std::cout << std::endl;
 

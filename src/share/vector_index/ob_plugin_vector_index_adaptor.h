@@ -150,12 +150,8 @@ enum ObVectorQueryProcessFlag {
 
 struct ObVectorParamData {
   ~ObVectorParamData() {
-    if (row_data_ != nullptr && row_length_ != 0 && count_ > 0) {
-      free(row_data_);
-    }
     row_data_ = nullptr;
     row_length_ = 0;
-    count_ = 0;
   }
 
   int64_t dim_;
@@ -163,7 +159,7 @@ struct ObVectorParamData {
   int64_t curr_idx_;
   ObObj *vectors_; // need do init by yourself
   ObObj *vids_;
-  char *row_data_ = nullptr;
+  char **row_data_ = nullptr;
   uint32_t row_length_ = 0;
   static const int64_t VI_PARAM_DATA_BATCH_SIZE = 1000;
   TO_STRING_KV(K_(dim), K_(count), K_(curr_idx), KP_(vectors), KP_(vids));
@@ -209,7 +205,7 @@ public:
     vec_data_.curr_idx_ += curr_cnt;
   }
 
-  void set_param_data(char *row_datas, uint32_t row_length) { vec_data_.row_data_ = row_datas; vec_data_.row_length_ = row_length; }
+  // void set_param_data(char *row_datas, uint32_t row_length) { vec_data_.row_data_ = row_datas; vec_data_.row_length_ = row_length; }
 
   ObVectorParamData *get_param_data() { return &vec_data_; }
 private:

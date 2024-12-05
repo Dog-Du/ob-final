@@ -45,11 +45,9 @@ public:
           obj_(nullptr),
           allocator_(nullptr) {};
     virtual ~ObVectorQueryVidIterator() {
-      if (row_data_ != nullptr && row_length_ > 0) {
-        free(row_data_);
-      }
-      row_data_ = nullptr;
-      row_length_ = 0;
+        if (obj_ != nullptr) {
+            delete [] obj_;
+        }
     };
 
     int
@@ -58,7 +56,7 @@ public:
     init(int64_t total,
          int64_t* vids,
          ObIAllocator* allocator,
-         char* row_data = nullptr,
+         char** row_data = nullptr,
          uint32_t row_length = 0);
     void
     set_batch_size(int64_t batch_size) {
@@ -77,7 +75,7 @@ public:
     reset() override;
 
 private:
-    char* row_data_ = nullptr;
+    char** row_data_ = nullptr;
     uint32_t row_length_ = 0;
     bool is_init_;
     int64_t total_;
@@ -85,7 +83,7 @@ private:
     int64_t batch_size_;
     int64_t* vids_;
     ObNewRow* row_;
-    ObObj* obj_;
+    ObObj* obj_ = nullptr;
     ObIAllocator* allocator_;
 };
 
@@ -93,7 +91,7 @@ struct ObVsagQueryResult {
     int64_t total_;
     const int64_t* vids_;
     const float* distances_;
-    char* row_datas_;
+    char** row_datas_;
     uint32_t row_length_;
 };
 
@@ -105,7 +103,7 @@ public:
                               const int64_t total,
                               int64_t& actual_cnt,
                               int64_t*& vids_result,
-                              char* row_datas,
+                              char** row_datas,
                               uint32_t row_length);
 
     static int

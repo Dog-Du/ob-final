@@ -203,7 +203,7 @@ knn_search(obvectorlib::VectorIndexPtr index_handler,
            const int64_t*& result_ids,
            int64_t& result_size,
            int ef_search,
-           char*& row_data,
+           char**& row_data,
            uint32_t& row_length) {
     return obvectorlib::knn_search(index_handler,
                                    query_vector,

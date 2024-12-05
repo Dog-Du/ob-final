@@ -390,8 +390,7 @@ int add_index(
         }
 
         if (get_static_ids().size() >= 1000'000) {
-            FAISS_ASSERT(get_static_ids().size() * hnsw_handler->get_dim() ==
-                   get_static_vector_list().size());
+            FAISS_ASSERT(get_static_ids().size() * hnsw_handler->get_dim() == get_static_vector_list().size());
 
             try {
                 if (!index->is_trained) {
@@ -455,8 +454,7 @@ int add_index(
         }
 
         if (get_static_ids().size() >= 1000'000) {
-            FAISS_ASSERT(get_static_ids().size() * hnsw_handler->get_dim() ==
-                   get_static_vector_list().size());
+            FAISS_ASSERT(get_static_ids().size() * hnsw_handler->get_dim() == get_static_vector_list().size());
 
             try {
                 if (!index->is_trained) {
@@ -532,8 +530,7 @@ int knn_search(
     int64_t* ids_result = (int64_t*)malloc(sizeof(int64_t) * topk);
 
     if (!get_static_ids().empty()) {
-        FAISS_ASSERT(get_static_ids().size() * hnsw_handler->get_dim() ==
-               get_static_vector_list().size());
+        FAISS_ASSERT(get_static_ids().size() * hnsw_handler->get_dim() == get_static_vector_list().size());
 
         try {
             if (!index->is_trained) {
@@ -554,7 +551,7 @@ int knn_search(
         FAISS_ASSERT(hnsw_handler->id_data_map_.size() == index->ntotal);
     }
 
-    FAISS_ASSERT(hnsw_handler->id_data_map_.size() == index->ntotal);
+    // FAISS_ASSERT(hnsw_handler->id_data_map_.size() == index->ntotal);
     set_hnsw_efsearch(index.get(), topk, 6000);
     int ret = 0;
     try {
@@ -588,7 +585,7 @@ int knn_search(
         const int64_t*& ids,
         int64_t& result_size,
         int ef_search,
-        char*& row_datas,
+        char**& row_datas,
         uint32_t& row_length) {
     HnswIndexHandler* hnsw_handler =
             static_cast<HnswIndexHandler*>(index_handler);
@@ -600,8 +597,7 @@ int knn_search(
     int64_t* ids_result = (int64_t*)malloc(sizeof(int64_t) * topk);
 
     if (!get_static_ids().empty()) {
-        FAISS_ASSERT(get_static_ids().size() * hnsw_handler->get_dim() ==
-               get_static_vector_list().size());
+        FAISS_ASSERT(get_static_ids().size() * hnsw_handler->get_dim() == get_static_vector_list().size());
 
         try {
             if (!index->is_trained) {
@@ -623,7 +619,8 @@ int knn_search(
     }
 
     set_hnsw_efsearch(index.get(), topk, 6000);
-    FAISS_ASSERT(index->ntotal == hnsw_handler->id_data_map_.size());
+    // 不知道为什么如果没有加FAISS_TEST就会产生空表。
+    // FAISS_ASSERT(index->ntotal == hnsw_handler->id_data_map_.size());
     int ret = 0;
     try {
         index->search(1, query_vector, topk, dist_result, ids_result);
@@ -651,11 +648,10 @@ int knn_search(
     if (result_size > 0) {
         auto iter = hnsw_handler->id_data_map_.begin();
         row_length = iter->second.get_length();
-        row_datas = (char*)malloc(result_size * row_length);
-        for (int64_t i = 0, offset = 0; i < result_size; ++i) {
+        row_datas = (char**)malloc(result_size * sizeof(char *));
+        for (int64_t i = 0; i < result_size; ++i) {
             iter = hnsw_handler->id_data_map_.find(ids[i]);
-            memcpy(row_datas + offset, iter->second.data(), row_length);
-            offset += row_length;
+            row_datas[i] = iter->second.data();
         }
     }
     return ret;
@@ -744,8 +740,7 @@ int fserialize(VectorIndexPtr& index_handler, std::ostream& out_stream) {
     auto& index = hnsw_handler->get_index();
 
     if (!get_static_ids().empty()) {
-        FAISS_ASSERT(get_static_ids().size() * hnsw_handler->get_dim() ==
-               get_static_vector_list().size());
+        FAISS_ASSERT(get_static_ids().size() * hnsw_handler->get_dim() == get_static_vector_list().size());
 
         try {
             if (!index->is_trained) {

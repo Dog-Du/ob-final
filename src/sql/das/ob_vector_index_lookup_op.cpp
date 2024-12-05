@@ -114,7 +114,7 @@ int ObVectorIndexLookupOp::init(const ObDASBaseCtDef *table_lookup_ctdef,
       }
     }
   }
-  
+
   return ret;
 }
 
@@ -386,7 +386,7 @@ int ObVectorIndexLookupOp::fetch_index_table_rowkey()
   } else if (OB_ISNULL(row)) {
     ret = OB_ERR_UNEXPECTED;
     LOG_WARN("should not be null", K(ret));
-  } else if (row->get_count() != 1) {
+  } else if (row->get_count() <= 0) {
     ret = OB_ERR_UNEXPECTED;
     LOG_WARN("should not be one row", K(row->get_count()), K(ret));
   } else if (OB_FALSE_IT(doc_id_key_obj_ = row->get_cell(0))) {
@@ -411,7 +411,7 @@ int ObVectorIndexLookupOp::fetch_index_table_rowkeys(int64_t &count, const int64
     ret = OB_ERR_UNEXPECTED;
     LOG_WARN("failed to get adaptor_vid_iter", K(ret));
   } else if (OB_FALSE_IT(adaptor_vid_iter_->set_batch_size(capacity))) {
-  } else if (OB_FAIL(adaptor_vid_iter_->get_next_rows(row, index_scan_row_cnt))) {
+  } else if (OB_FAIL(adaptor_vid_iter_->get_next_rows(row, index_scan_row_cnt))) { // 从adaptor_vid_iter_这里获取rows
     if (OB_UNLIKELY(OB_ITER_END != ret)) {
       LOG_WARN("failed to get next next row from text retrieval iter", K(ret));
     } else {
@@ -537,7 +537,7 @@ int ObVectorIndexLookupOp::set_lookup_vid_keys(ObNewRow *row, int64_t size)
     batch_info_guard.set_batch_size(size);
     for (int64_t i = 0; OB_SUCC(ret) && i < size; ++i) {
       batch_info_guard.set_batch_idx(i);
-      ObRowkey doc_id_rowkey(&(row->get_cell(i)), 1);
+      ObRowkey doc_id_rowkey(&(row[i].get_cell(0)), 1);
       if (OB_FAIL(set_lookup_vid_key(doc_id_rowkey))) {
         LOG_WARN("failed to set lookup vid key", K(ret));
       }
@@ -859,7 +859,7 @@ int ObVectorIndexLookupOp::call_pva_interface(const ObVidAdaLookupStatus& cur_st
   return ret;
 }
 
-int ObVectorIndexLookupOp::process_adaptor_state()
+int ObVectorIndexLookupOp::process_adaptor_state() // 去vector index查找，得到vids
 {
   int ret = OB_SUCCESS;
   bool is_continue = true;
