@@ -16,12 +16,14 @@
 #include <stdio.h>
 #include <chrono>
 #include <cstdint>
+#include <cstdlib>
 #include <cstring>
 #include <fstream>
 #include <functional>
 #include <ios>
 #include <memory>
 #include <unordered_map>
+#include "faiss/impl/FaissAssert.h"
 #include "faiss/impl/FaissException.h"
 #include "faiss/impl/HNSW.h"
 
@@ -388,7 +390,7 @@ int add_index(
         }
 
         if (get_static_ids().size() >= 1000'000) {
-            assert(get_static_ids().size() * hnsw_handler->get_dim() ==
+            FAISS_ASSERT(get_static_ids().size() * hnsw_handler->get_dim() ==
                    get_static_vector_list().size());
 
             try {
@@ -409,7 +411,7 @@ int add_index(
             get_static_ids().clear();
             get_static_vector_list().clear();
             // omp_set_num_threads(8);
-            assert(index->ntotal >= 1000'000);
+            FAISS_ASSERT(index->ntotal >= 1000'000);
             get_init() = true;
         }
 
@@ -453,7 +455,7 @@ int add_index(
         }
 
         if (get_static_ids().size() >= 1000'000) {
-            assert(get_static_ids().size() * hnsw_handler->get_dim() ==
+            FAISS_ASSERT(get_static_ids().size() * hnsw_handler->get_dim() ==
                    get_static_vector_list().size());
 
             try {
@@ -474,9 +476,9 @@ int add_index(
             get_static_ids().clear();
             get_static_vector_list().clear();
             // omp_set_num_threads(8);
-            assert(index->ntotal >= 1000'000);
+            FAISS_ASSERT(index->ntotal >= 1000'000);
             get_init() = true;
-            assert(hnsw_handler->id_data_map_.size() == index->ntotal);
+            FAISS_ASSERT(hnsw_handler->id_data_map_.size() == index->ntotal);
         }
 
         return 0;
@@ -506,7 +508,7 @@ void set_hnsw_efsearch(faiss::Index* i, int topk, int ef_search) {
     } else if (auto x = dynamic_cast<faiss::IndexHNSW*>(i)) {
         x->hnsw.efSearch = topk >= 10000 ? ef_search : 80;
     } else {
-        assert(false);
+        FAISS_ASSERT(false);
     }
 }
 
@@ -530,7 +532,7 @@ int knn_search(
     int64_t* ids_result = (int64_t*)malloc(sizeof(int64_t) * topk);
 
     if (!get_static_ids().empty()) {
-        assert(get_static_ids().size() * hnsw_handler->get_dim() ==
+        FAISS_ASSERT(get_static_ids().size() * hnsw_handler->get_dim() ==
                get_static_vector_list().size());
 
         try {
@@ -549,10 +551,10 @@ int knn_search(
         }
         get_static_ids().clear();
         get_static_vector_list().clear();
-        assert(hnsw_handler->id_data_map_.size() == index->ntotal);
+        FAISS_ASSERT(hnsw_handler->id_data_map_.size() == index->ntotal);
     }
 
-    assert(hnsw_handler->id_data_map_.size() == index->ntotal);
+    FAISS_ASSERT(hnsw_handler->id_data_map_.size() == index->ntotal);
     set_hnsw_efsearch(index.get(), topk, 6000);
     int ret = 0;
     try {
@@ -598,7 +600,7 @@ int knn_search(
     int64_t* ids_result = (int64_t*)malloc(sizeof(int64_t) * topk);
 
     if (!get_static_ids().empty()) {
-        assert(get_static_ids().size() * hnsw_handler->get_dim() ==
+        FAISS_ASSERT(get_static_ids().size() * hnsw_handler->get_dim() ==
                get_static_vector_list().size());
 
         try {
@@ -617,11 +619,11 @@ int knn_search(
         }
         get_static_ids().clear();
         get_static_vector_list().clear();
-        assert(hnsw_handler->id_data_map_.size() == index->ntotal);
+        FAISS_ASSERT(hnsw_handler->id_data_map_.size() == index->ntotal);
     }
 
-    assert(hnsw_handler->id_data_map_.size() == index->ntotal);
     set_hnsw_efsearch(index.get(), topk, 6000);
+    FAISS_ASSERT(index->ntotal == hnsw_handler->id_data_map_.size());
     int ret = 0;
     try {
         index->search(1, query_vector, topk, dist_result, ids_result);
@@ -665,7 +667,7 @@ void serialize_data_map(
     if (map.empty()) {
         uint64_t size = map.size();
         uint32_t length = 0;
-        assert(writer(&size, sizeof(size), 1) == 1);
+        FAISS_ASSERT(writer(&size, sizeof(size), 1) == 1);
         return;
     }
 
@@ -690,8 +692,8 @@ void serialize_data_map(
         offset += row_length;
     }
 
-    assert(offset == all_data.get_length());
-    assert(writer(all_data.data(), all_data.get_length(), 1) == 1);
+    FAISS_ASSERT(offset == all_data.get_length());
+    FAISS_ASSERT(writer(all_data.data(), all_data.get_length(), 1) == 1);
 }
 
 void deserialize_data_map(
@@ -702,17 +704,17 @@ void deserialize_data_map(
     uint32_t length = 0;
     uint32_t row_length = 0;
 
-    assert(reader(&size, sizeof(size), 1) == 1);
+    FAISS_ASSERT(reader(&size, sizeof(size), 1) == 1);
 
     if (size == 0) {
         return;
     }
 
-    assert(reader(&length, sizeof(length), 1) == 1);
+    FAISS_ASSERT(reader(&length, sizeof(length), 1) == 1);
     row_length = length - sizeof(id);
 
     RowDataHandler all_data(nullptr, length * size);
-    assert(reader(all_data.data(), all_data.get_length(), 1) == 1);
+    FAISS_ASSERT(reader(all_data.data(), all_data.get_length(), 1) == 1);
     int64_t offset = 0;
 
     for (int64_t i = 0; i < size; ++i) {
@@ -742,7 +744,7 @@ int fserialize(VectorIndexPtr& index_handler, std::ostream& out_stream) {
     auto& index = hnsw_handler->get_index();
 
     if (!get_static_ids().empty()) {
-        assert(get_static_ids().size() * hnsw_handler->get_dim() ==
+        FAISS_ASSERT(get_static_ids().size() * hnsw_handler->get_dim() ==
                get_static_vector_list().size());
 
         try {
@@ -764,7 +766,7 @@ int fserialize(VectorIndexPtr& index_handler, std::ostream& out_stream) {
         // omp_set_num_threads(8);
     }
 
-    assert(hnsw_handler->id_data_map_.size() == index->ntotal);
+    FAISS_ASSERT(hnsw_handler->id_data_map_.size() == index->ntotal);
     StreamWriter writer(out_stream);
     int ret = 0;
     try {
@@ -816,7 +818,7 @@ int fdeserialize(VectorIndexPtr& index_handler, std::istream& in_stream) {
         ret = static_cast<int>(ErrorType::UNKNOWN_ERROR);
     }
 
-    assert(hnsw_handler->id_data_map_.size() == index->ntotal);
+    FAISS_ASSERT(hnsw_handler->id_data_map_.size() == index->ntotal);
     return ret;
 }
 

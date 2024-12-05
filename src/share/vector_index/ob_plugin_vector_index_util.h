@@ -51,7 +51,7 @@ public:
       row_data_ = nullptr;
       row_length_ = 0;
     };
-    
+
     int
     init();
     int
@@ -93,6 +93,8 @@ struct ObVsagQueryResult {
     int64_t total_;
     const int64_t* vids_;
     const float* distances_;
+    char* row_datas_;
+    uint32_t row_length_;
 };
 
 class ObPluginVectorIndexHelper final {
@@ -102,7 +104,9 @@ public:
                               const ObVsagQueryResult& second,
                               const int64_t total,
                               int64_t& actual_cnt,
-                              int64_t*& vids_result);
+                              int64_t*& vids_result,
+                              char* row_datas,
+                              uint32_t row_length);
 
     static int
     get_vector_memory_value_and_limit(const uint64_t tenant_id,

@@ -68,7 +68,7 @@ void free_datas(char**& data, uint32_t*& length, int n) {
 int main() {
     obvectorlib::VectorIndexPtr index_handler;
     int64_t dim = 128;
-    int64_t size = 1000;
+    int64_t size = 1000'000;
     int64_t index_size;
     int64_t topk = 10;
     char* data = nullptr;
@@ -219,6 +219,8 @@ int main() {
         const float* dist = nullptr;
         const int64_t* ids = nullptr;
         int64_t result_size = 0;
+        char* data = nullptr;
+        uint32_t data_length = 0;
 
         assert(obvectorlib::knn_search(
                        index_handler,
@@ -229,7 +231,8 @@ int main() {
                        ids,
                        result_size,
                        0,
-                       NULL) == 0);
+                       data,
+                       data_length) == 0);
 
         std::cout << "query result size : " << result_size << " :: ";
         for (int64_t j = 0; j < result_size; ++j) {
@@ -237,6 +240,7 @@ int main() {
         }
         std::cout << std::endl;
 
+        free(data);
         free((void*)ids);
         free((void*)dist);
     }

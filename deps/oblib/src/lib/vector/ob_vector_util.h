@@ -110,6 +110,18 @@ knn_search(obvectorlib::VectorIndexPtr index_handler,
            void* invalid = NULL);
 
 int
+knn_search(obvectorlib::VectorIndexPtr index_handler,
+           float* query_vector,
+           int dim,
+           int64_t topk,
+           const float*& result_dist,
+           const int64_t*& result_ids,
+           int64_t& result_size,
+           int ef_search,
+           char*& row_data,
+           uint32_t& row_length);
+
+int
 fserialize(obvectorlib::VectorIndexPtr index_handler, std::ostream& out_stream);
 
 int
