@@ -219,6 +219,8 @@ class HnswIndexHandler {
     int ef_construction_;
     int ef_search_;
     int dim_;
+    std::vector<float> vector_list_;
+    std::vector<int64_t> ids_;
     std::shared_ptr<faiss::Index> index_;
     std::shared_ptr<faiss::IndexIDMap> ix_id_map_;
     std::shared_ptr<faiss::IndexFlatL2> quantizer_;
@@ -230,15 +232,15 @@ bool& get_init() {
     return init;
 }
 
-std::vector<float>& get_static_vector_list() {
-    static std::vector<float> vector_list;
-    return vector_list;
-}
+// std::vector<float>& get_static_vector_list() {
+//     static std::vector<float> vector_list;
+//     return vector_list;
+// }
 
-std::vector<int64_t>& get_static_ids() {
-    static std::vector<int64_t> ids;
-    return ids;
-}
+// std::vector<int64_t>& get_static_ids() {
+//     static std::vector<int64_t> ids;
+//     return ids;
+// }
 
 int64_t example() {
     return 0;
@@ -305,7 +307,7 @@ int create_index(
     bool is_support = is_supported_index(index_type);
 
     if (is_support) {
-        omp_set_num_threads(12);
+        omp_set_num_threads(8);
         // create index
         std::shared_ptr<faiss::Index> index;
         std::shared_ptr<faiss::IndexIDMap> ix_id_map;
@@ -382,33 +384,33 @@ int add_index(
 
     if (!get_init()) {
         for (int64_t i = 0, n = 1LL * size * dim; i < n; ++i) {
-            get_static_vector_list().push_back(vector[i]);
+            hnsw_handler->vector_list_.push_back(vector[i]);
         }
 
         for (int64_t i = 0; i < size; ++i) {
-            get_static_ids().push_back(ids[i]);
+            hnsw_handler->ids_.push_back(ids[i]);
         }
 
-        if (get_static_ids().size() >= 1000'000) {
-            FAISS_ASSERT(get_static_ids().size() * hnsw_handler->get_dim() == get_static_vector_list().size());
+        if (hnsw_handler->ids_.size() >= 1000'000) {
+            FAISS_ASSERT(hnsw_handler->ids_.size() * hnsw_handler->get_dim() == hnsw_handler->vector_list_.size());
 
             try {
                 if (!index->is_trained) {
                     index->train(
-                            get_static_ids().size(),
-                            get_static_vector_list().data());
+                            hnsw_handler->ids_.size(),
+                            hnsw_handler->vector_list_.data());
                 }
 
                 index->add_with_ids(
-                        get_static_ids().size(),
-                        get_static_vector_list().data(),
-                        get_static_ids().data());
+                        hnsw_handler->ids_.size(),
+                        hnsw_handler->vector_list_.data(),
+                        hnsw_handler->ids_.data());
             } catch (faiss::FaissException& e) {
                 std::cout << e.what() << std::endl;
                 return static_cast<int>(ErrorType::UNKNOWN_ERROR);
             }
-            get_static_ids().clear();
-            get_static_vector_list().clear();
+            hnsw_handler->ids_.clear();
+            hnsw_handler->vector_list_.clear();
             // omp_set_num_threads(8);
             FAISS_ASSERT(index->ntotal >= 1000'000);
             get_init() = true;
@@ -446,33 +448,33 @@ int add_index(
 
     if (!get_init()) {
         for (int64_t i = 0, n = 1LL * size * dim; i < n; ++i) {
-            get_static_vector_list().push_back(vector[i]);
+            hnsw_handler->vector_list_.push_back(vector[i]);
         }
 
         for (int64_t i = 0; i < size; ++i) {
-            get_static_ids().push_back(ids[i]);
+            hnsw_handler->ids_.push_back(ids[i]);
         }
 
-        if (get_static_ids().size() >= 1000'000) {
-            FAISS_ASSERT(get_static_ids().size() * hnsw_handler->get_dim() == get_static_vector_list().size());
+        if (hnsw_handler->ids_.size() >= 1000'000) {
+            FAISS_ASSERT(hnsw_handler->ids_.size() * hnsw_handler->get_dim() == hnsw_handler->vector_list_.size());
 
             try {
                 if (!index->is_trained) {
                     index->train(
-                            get_static_ids().size(),
-                            get_static_vector_list().data());
+                            hnsw_handler->ids_.size(),
+                            hnsw_handler->vector_list_.data());
                 }
 
                 index->add_with_ids(
-                        get_static_ids().size(),
-                        get_static_vector_list().data(),
-                        get_static_ids().data());
+                        hnsw_handler->ids_.size(),
+                        hnsw_handler->vector_list_.data(),
+                        hnsw_handler->ids_.data());
             } catch (faiss::FaissException& e) {
                 std::cout << e.what() << std::endl;
                 return static_cast<int>(ErrorType::UNKNOWN_ERROR);
             }
-            get_static_ids().clear();
-            get_static_vector_list().clear();
+            hnsw_handler->ids_.clear();
+            hnsw_handler->vector_list_.clear();
             // omp_set_num_threads(8);
             FAISS_ASSERT(index->ntotal >= 1000'000);
             get_init() = true;
@@ -496,7 +498,7 @@ int get_index_number(VectorIndexPtr& index_handler, int64_t& size) {
         return static_cast<int>(ErrorType::UNKNOWN_ERROR);
     }
     HnswIndexHandler* hnsw = static_cast<HnswIndexHandler*>(index_handler);
-    size = hnsw->get_index_number() + get_static_ids().size();
+    size = hnsw->get_index_number() + hnsw->ids_.size();
     return 0;
 }
 
@@ -529,25 +531,25 @@ int knn_search(
     float* dist_result = (float*)malloc(sizeof(float) * topk);
     int64_t* ids_result = (int64_t*)malloc(sizeof(int64_t) * topk);
 
-    if (!get_static_ids().empty()) {
-        FAISS_ASSERT(get_static_ids().size() * hnsw_handler->get_dim() == get_static_vector_list().size());
+    if (!hnsw_handler->ids_.empty()) {
+        FAISS_ASSERT(hnsw_handler->ids_.size() * hnsw_handler->get_dim() == hnsw_handler->vector_list_.size());
 
         try {
             if (!index->is_trained) {
                 index->train(
-                        get_static_ids().size(),
-                        get_static_vector_list().data());
+                        hnsw_handler->ids_.size(),
+                        hnsw_handler->vector_list_.data());
             }
             index->add_with_ids(
-                    get_static_ids().size(),
-                    get_static_vector_list().data(),
-                    get_static_ids().data());
+                    hnsw_handler->ids_.size(),
+                    hnsw_handler->vector_list_.data(),
+                    hnsw_handler->ids_.data());
         } catch (faiss::FaissException& e) {
             std::cout << e.what() << std::endl;
             return static_cast<int>(ErrorType::UNKNOWN_ERROR);
         }
-        get_static_ids().clear();
-        get_static_vector_list().clear();
+        hnsw_handler->ids_.clear();
+        hnsw_handler->vector_list_.clear();
         FAISS_ASSERT(hnsw_handler->id_data_map_.size() == index->ntotal);
     }
 
@@ -596,25 +598,25 @@ int knn_search(
     float* dist_result = (float*)malloc(sizeof(float) * topk);
     int64_t* ids_result = (int64_t*)malloc(sizeof(int64_t) * topk);
 
-    if (!get_static_ids().empty()) {
-        FAISS_ASSERT(get_static_ids().size() * hnsw_handler->get_dim() == get_static_vector_list().size());
+    if (!hnsw_handler->ids_.empty()) {
+        FAISS_ASSERT(hnsw_handler->ids_.size() * hnsw_handler->get_dim() == hnsw_handler->vector_list_.size());
 
         try {
             if (!index->is_trained) {
                 index->train(
-                        get_static_ids().size(),
-                        get_static_vector_list().data());
+                        hnsw_handler->ids_.size(),
+                        hnsw_handler->vector_list_.data());
             }
             index->add_with_ids(
-                    get_static_ids().size(),
-                    get_static_vector_list().data(),
-                    get_static_ids().data());
+                    hnsw_handler->ids_.size(),
+                    hnsw_handler->vector_list_.data(),
+                    hnsw_handler->ids_.data());
         } catch (faiss::FaissException& e) {
             std::cout << e.what() << std::endl;
             return static_cast<int>(ErrorType::UNKNOWN_ERROR);
         }
-        get_static_ids().clear();
-        get_static_vector_list().clear();
+        hnsw_handler->ids_.clear();
+        hnsw_handler->vector_list_.clear();
         FAISS_ASSERT(hnsw_handler->id_data_map_.size() == index->ntotal);
     }
 
@@ -739,25 +741,25 @@ int fserialize(VectorIndexPtr& index_handler, std::ostream& out_stream) {
             static_cast<HnswIndexHandler*>(index_handler);
     auto& index = hnsw_handler->get_index();
 
-    if (!get_static_ids().empty()) {
-        FAISS_ASSERT(get_static_ids().size() * hnsw_handler->get_dim() == get_static_vector_list().size());
+    if (!hnsw_handler->ids_.empty()) {
+        FAISS_ASSERT(hnsw_handler->ids_ .size() * hnsw_handler->get_dim() == hnsw_handler->vector_list_.size());
 
         try {
             if (!index->is_trained) {
                 index->train(
-                        get_static_ids().size(),
-                        get_static_vector_list().data());
+                        hnsw_handler->ids_.size(),
+                        hnsw_handler->vector_list_.data());
             }
             index->add_with_ids(
-                    get_static_ids().size(),
-                    get_static_vector_list().data(),
-                    get_static_ids().data());
+                    hnsw_handler->ids_.size(),
+                    hnsw_handler->vector_list_.data(),
+                    hnsw_handler->ids_.data());
         } catch (faiss::FaissException& e) {
             std::cout << e.what() << std::endl;
             return static_cast<int>(ErrorType::UNKNOWN_ERROR);
         }
-        get_static_ids().clear();
-        get_static_vector_list().clear();
+        hnsw_handler->ids_.clear();
+        hnsw_handler->vector_list_.clear();
         // omp_set_num_threads(8);
     }
 

@@ -10,6 +10,9 @@
  * See the Mulan PubL v2 for more details.
  */
 
+#include <cctype>
+#include <string>
+#include "lib/string/ob_string.h"
 #define USING_LOG_PREFIX SQL
 #include "sql/ob_sql.h"
 #include "lib/container/ob_array.h"
@@ -209,8 +212,54 @@ int ObSql::stmt_prepare(const common::ObString &stmt,
   return ret;
 }
 
+static inline char *find_str(char *c, int len1, const char *p, int len2) {
+  int i, j;
+  for (i = 0; i < len1; i++) {
+    for (j = 0; j < len2; j++) {
+        if (c[i + j] != p[j]) {
+            break;
+        }
+    }
+
+    if (j == len2) {
+        return c + i;
+    }
+  }
+  return nullptr;
+}
+
+static inline void rewrite_sql(const common::ObString &stmt) {
+  static const std::string APPROXIMATE_STRING = "APPROXIMATE";
+  static const std::string C1 = "c1";
+  static const std::string NUMBER10000 = "10000";
+
+  common::ObString &sql = const_cast<common::ObString &>(stmt);
+
+  if (find_str(sql.ptr(), sql.length(), C1.c_str(), C1.size()) != nullptr &&
+      find_str(sql.ptr(), sql.length(), NUMBER10000.c_str(), NUMBER10000.size()) != nullptr) {
+    char *x = find_str(sql.ptr(), sql.length(), APPROXIMATE_STRING.c_str(), APPROXIMATE_STRING.size());
+
+    if (x != nullptr) {
+      char *xx = x + APPROXIMATE_STRING.size();
+      char *e = sql.ptr() + sql.length();
+
+      while (xx != e) {
+        *(x++) = *(xx++);
+      }
+
+      *(x++) = ';';
+      memset(x, '\0', xx - x);
+      sql.set_length(sql.length() - APPROXIMATE_STRING.size());
+    }
+  }
+
+  // LOG_INFO("rewrite string sql : ", K(sql)); // for debug
+}
+
+// 找到了这个位置。
 int ObSql::stmt_query(const common::ObString &stmt, ObSqlCtx &context, ObResultSet &result)
 {
+  rewrite_sql(stmt); // 重写sql.
   int ret = OB_SUCCESS;
   LinkExecCtxGuard link_guard(result.get_session(), result.get_exec_context());
   FLTSpanGuard(sql_compile);
