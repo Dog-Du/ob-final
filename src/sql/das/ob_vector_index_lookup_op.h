@@ -64,6 +64,9 @@ public:
     vec_index_param_(),
     dim_(0) {}
   virtual ~ObVectorIndexLookupOp() {};
+  // virtual int get_next_row() override;
+  // virtual int get_next_rows(int64_t &count, int64_t capacity) override;
+
   int init(const ObDASBaseCtDef *table_lookup_ctdef,
             ObDASBaseRtDef *table_lookup_rtdef,
             transaction::ObTxDesc *tx_desc,
@@ -109,7 +112,6 @@ protected:
   virtual int get_aux_table_rowkey() override;
   virtual int get_aux_table_rowkeys(const int64_t lookup_row_cnt) override;
 private:
-  // int next_state() override;
   int init_delta_buffer_scan_param();
   int init_index_id_scan_param();
   int init_snapshot_scan_param();
@@ -144,6 +146,10 @@ private:
   static const int64_t SNAPSHOT_PRI_KEY_CNT = 1;
   static const uint64_t MAX_VSAG_QUERY_RES_SIZE = 16384;
 private:
+  bool need_scan_table_;
+
+
+
   common::ObArenaAllocator vec_op_alloc_;
   common::ObNewRowIterator *aux_lookup_iter_;
   ObVectorQueryVidIterator* adaptor_vid_iter_;

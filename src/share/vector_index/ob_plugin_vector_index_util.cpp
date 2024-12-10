@@ -65,12 +65,17 @@ ObVectorQueryVidIterator::init(
     return ret;
 }
 
+// vid 是一个递增的变量，
+// 插入的向量索引的时候，因为底层存储使用LSM，因此是按id有序上升的
+// id范围为 ： [0,99999], vid从10001开始计数，也就是说vid范围是 [10001, 110000]
+// 呈线性映射 id = vid - 10001;
+
+static inline int64_t vid2id(int64_t vid) {
+    return vid - 2010001;
+}
+
 int
 ObVectorQueryVidIterator::get_next_row(ObNewRow*& row) {
-    const int64_t C1_OFFSET = 20 + 4;
-    const int64_t VECTOR_OFFSET = C1_OFFSET + 4;
-    const int64_t VECTOR_DELTA = VECTOR_OFFSET;
-
     INIT_SUCC(ret);
     if (!is_init_) {
         ret = OB_NOT_INIT;
@@ -81,10 +86,8 @@ ObVectorQueryVidIterator::get_next_row(ObNewRow*& row) {
         obj_[2].reset();
         row_->reset();
 
-        obj_[0].set_int(vids_[cur_pos_]);
-        obj_[1].set_int(*(int32_t*)(row_data_[cur_pos_] + C1_OFFSET));
-        obj_[2].set_string(
-            common::ObVarcharType, row_data_[cur_pos_] + VECTOR_OFFSET, row_length_ - VECTOR_DELTA);
+        obj_[0].set_int(vids_[cur_pos_]); // vid
+        obj_[1].set_int(vid2id(vids_[cur_pos_])); // id
 
         cur_pos_++;
         row_->cells_ = obj_;
@@ -101,10 +104,6 @@ ObVectorQueryVidIterator::get_next_row(ObNewRow*& row) {
 
 int
 ObVectorQueryVidIterator::get_next_rows(ObNewRow*& row, int64_t& size) {
-    const int64_t C1_OFFSET = 20 + 4;
-    const int64_t VECTOR_OFFSET = C1_OFFSET + 4;
-    const int64_t VECTOR_DELTA = VECTOR_OFFSET;
-
     INIT_SUCC(ret);
     if (!is_init_) {
         ret = OB_NOT_INIT;
@@ -128,12 +127,7 @@ ObVectorQueryVidIterator::get_next_rows(ObNewRow*& row, int64_t& size) {
                     // obj[index].set_int(vids_[cur_pos_++]);
 
                     obj[index * 3 + 0].set_int(vids_[cur_pos_]);
-                    obj[index * 3 + 1].set_int(
-                        *(int32_t*)(row_data_[cur_pos_] + C1_OFFSET));
-                    obj[index * 3 + 2].set_string(
-                        common::ObVarcharType,
-                        row_data_[cur_pos_] + VECTOR_OFFSET,
-                        row_length_ - VECTOR_DELTA);
+                    obj[index * 3 + 1].set_int(vid2id(vids_[cur_pos_]));
 
                     cur_pos_++;
                     row[index].cells_ = &obj[index * 3 + 0];

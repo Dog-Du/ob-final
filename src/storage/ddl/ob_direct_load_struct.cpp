@@ -1445,6 +1445,7 @@ int ObDirectLoadSliceWriter::fill_sstable_slice(
         for (int64_t i = 0; OB_SUCC(ret) && i < cur_row->get_column_count(); ++i) {
           const ObColDesc &col_desc = data_desc.get_col_desc_array().at(i);
           ObStorageDatum &datum_cell = cur_row->storage_datums_[i];
+
           if (i >= schema_item.rowkey_column_num_ && i < schema_item.rowkey_column_num_ + ObMultiVersionRowkeyHelpper::get_extra_rowkey_col_cnt()) {
             // skip multi version column
           } else if (datum_cell.is_null()) {
@@ -2224,7 +2225,9 @@ int ObVectorIndexSliceStore::append_row(const blocksstable::ObDatumRow &datum_ro
       } else if (OB_FAIL(adaptor_guard.get_adatper()->add_snap_index(reinterpret_cast<float*>(vec_str.ptr()), &vec_vid, 1, row_data, length))) {
         LOG_WARN("fail to build index to adaptor", K(ret), KPC(this));
       } else {
-        LOG_INFO("[vec index debug] add into snap index success", K(tablet_id_), K(vec_vid), K(vec_str));
+        static int64_t total_insert_cnt = 0;
+        ++total_insert_cnt;
+        LOG_INFO("[vec index debug] add into snap index success", K(vec_vid), K(total_insert_cnt));
       }
 
       free(row_data);

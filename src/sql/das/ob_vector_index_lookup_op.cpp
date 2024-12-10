@@ -9,6 +9,9 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PubL v2 for more details.
  */
+#include <cstdint>
+#include "lib/ob_errno.h"
+#include "row/ob_row.h"
 #define USING_LOG_PREFIX SQL_DAS
 #include "sql/das/ob_das_scan_op.h"
 #include "sql/das/ob_das_ir_define.h"
@@ -31,6 +34,172 @@ using namespace share;
 
 namespace sql
 {
+
+// next_state() :
+// need_scan_aux_ == true : INDEX_SCAN -> AUX_LOOKUP -> DO_LOOKUP -> OUTPUT_ROWS;
+// need_scan_aux_ == false : INDEX_SCAN -> DO_LOOKUP -> OUTPUT_ROWS;
+
+// int ObVectorIndexLookupOp::get_next_row()
+// {
+//   int ret = OB_SUCCESS;
+//   bool got_next_row = false;
+//   while (OB_SUCC(ret) && !got_next_row) {
+//     switch (state_) {
+//       case INDEX_SCAN: {
+//         reset_lookup_state();
+//         if (OB_FAIL(fetch_index_table_rowkey())) {
+//           if (OB_UNLIKELY(ret != OB_ITER_END)) {
+//             LOG_WARN("failed get index table rowkey", K(ret));
+//           } else {
+//             index_end_ = true;
+//             ret = OB_SUCCESS;
+//           }
+//         } else {
+//           ++lookup_rowkey_cnt_;
+//         }
+
+//         if (FAILEDx(ObDomainIndexLookupOp::next_state())) {
+//           LOG_WARN("failed to switch to next lookup state", K(ret), K(state_));
+//         }
+//         break;
+//       }
+//       case AUX_LOOKUP: {
+//         if (OB_FAIL(get_aux_table_rowkey())) {
+//           if (ret != OB_ITER_END) {
+//             LOG_WARN("do aux index lookup failed", K(ret));
+//           }
+//         } else {
+//           // ++lookup_rowkey_cnt_;
+//           if (OB_FAIL(ObDomainIndexLookupOp::next_state())) {
+//             LOG_WARN("failed to switch to next lookup state", K(ret), K(state_));
+//           }
+//         }
+//         break;
+//       }
+//       case DO_LOOKUP: {
+//         if (OB_FAIL(do_index_lookup())) {
+//           LOG_WARN("do index lookup failed", K(ret));
+//         } else if (OB_FAIL(ObDomainIndexLookupOp::next_state())) {
+//           LOG_WARN("failed to switch to next lookup state", K(ret), K(state_));
+//         }
+//         break;
+//       }
+//       case OUTPUT_ROWS: {
+//         if (OB_FAIL(get_next_row_from_data_table())) {
+//           if (OB_ITER_END == ret) {
+//             ret = OB_SUCCESS;
+//             if (OB_FAIL(check_lookup_row_cnt())) {
+//               LOG_WARN("failed to check lookup row cnt", K(ret));
+//             } else if (OB_FAIL(ObDomainIndexLookupOp::next_state())) {
+//               LOG_WARN("failed to switch to next lookup state", K(ret));
+//             }
+//           } else {
+//             LOG_WARN("look up get next row failed", K(ret));
+//           }
+//         } else {
+//           got_next_row = true;
+//           ++lookup_row_cnt_;
+//           LOG_DEBUG("got next row from table lookup",  K(ret), K(lookup_row_cnt_), K(lookup_rowkey_cnt_), "main table output", ROWEXPR2STR(get_eval_ctx(), get_output_expr()) );
+//         }
+//         break;
+//       }
+//       case FINISHED: {
+//         ret = OB_ITER_END;
+//         break;
+//       }
+//       default: {
+//         ret = OB_ERR_UNEXPECTED;
+//         LOG_WARN("unexpected state", K(state_));
+//       }
+//     }
+//   }
+
+//   return ret;
+// }
+
+
+// int ObVectorIndexLookupOp::get_next_rows(int64_t &count, int64_t capacity)
+// {
+//   int ret = OB_SUCCESS;
+//   bool got_next_row = false;
+//   while (OB_SUCC(ret) && !got_next_row) {
+//     switch (state_) {
+//       case INDEX_SCAN: {
+//         reset_lookup_state();
+//         int64_t rowkey_count = 0;
+//         lookup_row_cnt_ = 0;
+//         lookup_row_cnt_ = 0;
+//         if (OB_FAIL(fetch_index_table_rowkeys(rowkey_count, capacity))) {
+//           LOG_WARN("failed get rowkeys from index table", K(ret));
+//         } else if (0 == rowkey_count) {
+//           index_end_ = true;
+//         }
+//         if (OB_SUCC(ret)) {
+//           if (rowkey_count > 0) {
+//             lookup_rowkey_cnt_ += rowkey_count;
+//           }
+//           if (OB_FAIL(ObDomainIndexLookupOp::next_state())) {
+//             LOG_WARN("failed to switch to next lookup state", K(ret), K(state_));
+//           }
+//         }
+//         break;
+//       }
+//       case AUX_LOOKUP: {
+//         if (OB_FAIL(get_aux_table_rowkeys(lookup_rowkey_cnt_))) {
+//           if (ret != OB_ITER_END) {
+//             LOG_WARN("do aux index lookup failed", K(ret));
+//           }
+//         } else if (OB_FAIL(ObDomainIndexLookupOp::next_state())) {
+//           LOG_WARN("failed to switch to next lookup state", K(ret), K(state_));
+//         }
+//         break;
+//       }
+//       case DO_LOOKUP: {
+//         lookup_row_cnt_ = 0;
+//         if (OB_FAIL(do_index_lookup())) {
+//           LOG_WARN("do index lookup failed", K(ret));
+//         } else if (OB_FAIL(ObDomainIndexLookupOp::next_state())) {
+//           LOG_WARN("failed to switch to next lookup state", K(ret), K(state_));
+//         }
+//         break;
+//       }
+//       case OUTPUT_ROWS: {
+//         if (OB_FAIL(get_next_rows_from_data_table(count, capacity))) {
+//           if (OB_ITER_END == ret) {
+//             ret = OB_SUCCESS;
+//             if (count > 0) {
+//               lookup_row_cnt_ += count;
+//               got_next_row = true;
+//             } else if (OB_FAIL(check_lookup_row_cnt())) {
+//               LOG_WARN("failed to check table lookup", K(ret));
+//             } else if (OB_FAIL(ObDomainIndexLookupOp::next_state())) {
+//               LOG_WARN("failed to switch to next lookup state", K(ret), K_(state));
+//             }
+//           } else {
+//             LOG_WARN("look up get next row failed", K(ret));
+//           }
+//         } else {
+//           got_next_row = true;
+//           lookup_row_cnt_ += count;
+//           const ObBitVector *skip = nullptr;
+//           PRINT_VECTORIZED_ROWS(SQL, DEBUG, get_eval_ctx(), get_output_expr(), count, skip,
+//                                 K(ret), K(lookup_row_cnt_), K(lookup_rowkey_cnt_));
+//         }
+//         break;
+//       }
+//       case FINISHED: {
+//         ret = OB_ITER_END;
+//         break;
+//       }
+//       default: {
+//         ret = OB_ERR_UNEXPECTED;
+//         LOG_WARN("unexpected state", K(state_));
+//       }
+//     }
+//   }
+
+//   return ret;
+// }
 
 int ObVectorIndexLookupOp::init(const ObDASBaseCtDef *table_lookup_ctdef,
                                 ObDASBaseRtDef *table_lookup_rtdef,
@@ -81,7 +250,11 @@ int ObVectorIndexLookupOp::init(const ObDASBaseCtDef *table_lookup_ctdef,
       ret = OB_BAD_NULL_ERROR;
       LOG_WARN("lookup rtdef is nullptr", KP(doc_id_lookup_rtdef_), KP(lookup_rtdef_));
     } else {
-      need_scan_aux_ = true;
+      need_scan_aux_ = false;
+
+      need_scan_table_ = (lookup_ctdef_->table_param_.get_output_projector().count() == 1 &&
+         lookup_ctdef_->table_param_.get_output_projector().at(0) == 0);
+
       doc_id_lookup_ctdef_ = aux_lookup_ctdef->get_lookup_scan_ctdef();
       doc_id_lookup_rtdef_ = aux_lookup_rtdef->get_lookup_scan_rtdef();
       doc_id_expr_ = vir_scan_ctdef->inv_scan_vec_id_col_;
@@ -115,6 +288,7 @@ int ObVectorIndexLookupOp::init(const ObDASBaseCtDef *table_lookup_ctdef,
     }
   }
 
+  // LOG_INFO("this", K(*this));
   return ret;
 }
 
@@ -311,6 +485,8 @@ int ObVectorIndexLookupOp::init_index_id_scan_param()
   } else if (OB_FAIL(index_id_scan_param_.key_ranges_.push_back(scan_range))) {
     LOG_WARN("failed to append scan range", K(ret));
   }
+
+  // LOG_INFO("this", K(*this));
   return ret;
 }
 
@@ -370,6 +546,8 @@ int ObVectorIndexLookupOp::fetch_index_table_rowkey()
 {
   int ret = OB_SUCCESS;
   ObNewRow *row = nullptr;
+  int64_t index_scan_row_cnt = 0;
+
   if (OB_ISNULL(adaptor_vid_iter_)) {
     if (OB_FAIL(process_adaptor_state())) {
       LOG_WARN("failed to process_adaptor_state", K(ret));
@@ -383,16 +561,20 @@ int ObVectorIndexLookupOp::fetch_index_table_rowkey()
     if (OB_UNLIKELY(OB_ITER_END != ret)) {
       LOG_WARN("failed to get next next row from text retrieval iter", K(ret));
     }
+  } else if ((index_scan_row_cnt = 1) <= 0){
+    ret = OB_ITER_END;
+    LOG_WARN("failed to get ");
   } else if (OB_ISNULL(row)) {
     ret = OB_ERR_UNEXPECTED;
     LOG_WARN("should not be null", K(ret));
   } else if (row->get_count() <= 0) {
     ret = OB_ERR_UNEXPECTED;
     LOG_WARN("should not be one row", K(row->get_count()), K(ret));
-  } else if (OB_FALSE_IT(doc_id_key_obj_ = row->get_cell(0))) {
+  } else if (OB_FALSE_IT(doc_id_key_obj_ = row->get_cell(1))) { // 1 是 id。
   } else if (OB_FAIL(set_lookup_vid_key())) {
     LOG_WARN("failed to set lookup vid query key", K(ret));
   }
+
   return ret;
 }
 
@@ -401,6 +583,7 @@ int ObVectorIndexLookupOp::fetch_index_table_rowkeys(int64_t &count, const int64
   int ret = OB_SUCCESS;
   ObNewRow *row = nullptr;
   int64_t index_scan_row_cnt = 0;
+
   if (OB_ISNULL(adaptor_vid_iter_)) {
     if (OB_FAIL(process_adaptor_state())) {
       LOG_WARN("failed to process_adaptor_state", K(ret));
@@ -418,6 +601,7 @@ int ObVectorIndexLookupOp::fetch_index_table_rowkeys(int64_t &count, const int64
       ret = OB_SUCCESS;
     }
   }
+
   if (OB_SUCC(ret) && index_scan_row_cnt > 0) {
     if (OB_FAIL(set_lookup_vid_keys(row, index_scan_row_cnt))) {
       LOG_WARN("failed to set lookup vid query key", K(ret));
@@ -434,6 +618,7 @@ int ObVectorIndexLookupOp::set_lookup_vid_key()
   ObNewRange doc_id_range;
   ObRowkey doc_id_rowkey(&doc_id_key_obj_, 1);
   uint64_t ref_table_id = doc_id_lookup_ctdef_->ref_table_id_;
+
   if (OB_FAIL(doc_id_range.build_range(ref_table_id, doc_id_rowkey))) {
     LOG_WARN("build vid lookup range failed", K(ret));
   } else if (OB_FAIL(doc_id_scan_param_.key_ranges_.push_back(doc_id_range))) {
@@ -504,9 +689,11 @@ int ObVectorIndexLookupOp::reuse_scan_iter(bool need_switch_param)
   if (OB_FAIL(ret)) {
   } else if (OB_FAIL(ObDomainIndexLookupOp::reuse_scan_iter())) {
     LOG_WARN("failed to reuse scan iter", K(ret));
-  } else if (OB_FAIL(tsc_service.reuse_scan_iter(doc_id_scan_param_.need_switch_param_, rowkey_iter_))) {
-    LOG_WARN("failed to reuse scan iter", K(ret));
   }
+  // else if (OB_FAIL(tsc_service.reuse_scan_iter(doc_id_scan_param_.need_switch_param_, rowkey_iter_))) {
+  //   LOG_WARN("failed to reuse scan iter", K(ret));
+  // }
+
   vec_op_alloc_.reset();
   return ret;
 }
@@ -518,7 +705,7 @@ int ObVectorIndexLookupOp::set_lookup_vid_key(ObRowkey& doc_id_rowkey)
   uint64_t ref_table_id = doc_id_lookup_ctdef_->ref_table_id_;
   if (OB_FAIL(doc_id_range.build_range(ref_table_id, doc_id_rowkey))) {
     LOG_WARN("build doc id lookup range failed", K(ret));
-  } else if (OB_FAIL(doc_id_scan_param_.key_ranges_.push_back(doc_id_range))) {
+  } else if (OB_FAIL(scan_param_.key_ranges_.push_back(doc_id_range))) { // 改成 scan_param_ 的扫描，因为跳过了aux_扫描。
     LOG_WARN("store lookup key range failed", K(ret));
   } else {
     LOG_DEBUG("generate doc id scan range", K(ret), K(doc_id_range));
@@ -537,7 +724,7 @@ int ObVectorIndexLookupOp::set_lookup_vid_keys(ObNewRow *row, int64_t size)
     batch_info_guard.set_batch_size(size);
     for (int64_t i = 0; OB_SUCC(ret) && i < size; ++i) {
       batch_info_guard.set_batch_idx(i);
-      ObRowkey doc_id_rowkey(&(row[i].get_cell(0)), 1);
+      ObRowkey doc_id_rowkey(&(row[i].get_cell(1)), 1); // 1 是 id。
       if (OB_FAIL(set_lookup_vid_key(doc_id_rowkey))) {
         LOG_WARN("failed to set lookup vid key", K(ret));
       }
@@ -548,6 +735,7 @@ int ObVectorIndexLookupOp::set_lookup_vid_keys(ObNewRow *row, int64_t size)
 
 int ObVectorIndexLookupOp::get_aux_table_rowkeys(const int64_t lookup_row_cnt)
 {
+  return OB_SUCCESS;
   int ret = OB_SUCCESS;
   doc_id_lookup_rtdef_->p_pd_expr_op_->clear_evaluated_flag();
   int64_t rowkey_cnt = 0;
@@ -560,6 +748,7 @@ int ObVectorIndexLookupOp::get_aux_table_rowkeys(const int64_t lookup_row_cnt)
       LOG_WARN("fail to get next row", K(ret));
     }
   }
+
   if (OB_FAIL(ret) && ret != OB_ITER_END) {
   } else if (rowkey_cnt > 0) {
     ObEvalCtx::BatchInfoScopeGuard batch_info_guard(*doc_id_lookup_rtdef_->eval_ctx_);
@@ -992,6 +1181,7 @@ int ObVectorIndexLookupOp::next_state(ObVidAdaLookupStatus& cur_state,
 }
 int ObVectorIndexLookupOp::get_aux_table_rowkey()
 {
+  return OB_SUCCESS;
   int ret = OB_SUCCESS;
   doc_id_lookup_rtdef_->p_pd_expr_op_->clear_evaluated_flag();
   if (index_end_ && doc_id_scan_param_.key_ranges_.empty()) {
@@ -1008,6 +1198,7 @@ int ObVectorIndexLookupOp::get_aux_table_rowkey()
 
 int ObVectorIndexLookupOp::get_cmpt_aux_table_rowkey()
 {
+  return OB_SUCCESS;
   int ret = OB_SUCCESS;
   doc_id_lookup_rtdef_->p_pd_expr_op_->clear_evaluated_flag();
   if (index_end_ && doc_id_scan_param_.key_ranges_.empty()) {
@@ -1127,6 +1318,8 @@ int ObVectorIndexLookupOp::set_main_table_lookup_key()
 
 int ObVectorIndexLookupOp::do_aux_table_lookup()
 {
+  return OB_SUCCESS;
+
   int ret = OB_SUCCESS;
   ObITabletScan &tsc_service = get_tsc_service();
   if (nullptr == rowkey_iter_) {
@@ -1260,6 +1453,7 @@ int ObVectorIndexLookupOp::set_vector_query_condition(ObVectorQueryConditions &q
     query_cond.query_order_ = true;
     query_cond.row_iter_ = snapshot_iter_;
     query_cond.query_scn_ = snapshot_scan_param_.snapshot_.core_.version_;
+
     ObSQLSessionInfo *session = nullptr;
     uint64_t ob_hnsw_ef_search = 0;
     ObDatum *vec_datum = NULL;

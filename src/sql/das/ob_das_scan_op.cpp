@@ -1733,6 +1733,7 @@ int ObLocalIndexLookupOp::do_index_lookup()
   int ret = OB_SUCCESS;
   ObITabletScan &tsc_service = get_tsc_service();
   ObNewRowIterator *&storage_iter = get_lookup_storage_iter();
+
   if (scan_param_.key_ranges_.empty()) {
     //do nothing
   } else if (storage_iter == nullptr) {
@@ -1800,7 +1801,7 @@ int ObLocalIndexLookupOp::check_lookup_row_cnt()
   if (GCONF.enable_defensive_check()
       && !is_group_scan_
       && lookup_ctdef_->pd_expr_spec_.pushdown_filters_.empty()) {
-    if (OB_UNLIKELY(lookup_rowkey_cnt_ != lookup_row_cnt_)) {
+    if (OB_UNLIKELY(lookup_rowkey_cnt_ != lookup_row_cnt_)) { // 要求lookup_rowkey_cnt_ == lookup_row_cnt_
       ret = OB_ERR_DEFENSIVE_CHECK;
       ObString func_name = ObString::make_string("check_local_lookup_row_cnt");
       LOG_USER_ERROR(OB_ERR_DEFENSIVE_CHECK, func_name.length(), func_name.ptr());

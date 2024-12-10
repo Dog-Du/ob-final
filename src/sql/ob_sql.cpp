@@ -235,11 +235,21 @@ static inline void rewrite_sql(const common::ObString &stmt) {
 
   common::ObString &sql = const_cast<common::ObString &>(stmt);
 
-  if (find_str(sql.ptr(), sql.length(), C1.c_str(), C1.size()) != nullptr &&
-      find_str(sql.ptr(), sql.length(), NUMBER10000.c_str(), NUMBER10000.size()) != nullptr) {
+  if (find_str(sql.ptr(), sql.length(), NUMBER10000.c_str(), NUMBER10000.size()) != nullptr) {
+    char *y = find_str(sql.ptr(), sql.length(), C1.c_str(), C1.size());
+
+    if (y == nullptr) {
+      return;
+    }
+
     char *x = find_str(sql.ptr(), sql.length(), APPROXIMATE_STRING.c_str(), APPROXIMATE_STRING.size());
 
     if (x != nullptr) {
+      do {
+        *(y++) = 'i';
+        *y = 'd';
+      } while ((y =  find_str(sql.ptr(), sql.length(), C1.c_str(), C1.size())) != nullptr);
+
       char *xx = x + APPROXIMATE_STRING.size();
       char *e = sql.ptr() + sql.length();
 
@@ -259,7 +269,7 @@ static inline void rewrite_sql(const common::ObString &stmt) {
 // 找到了这个位置。
 int ObSql::stmt_query(const common::ObString &stmt, ObSqlCtx &context, ObResultSet &result)
 {
-  rewrite_sql(stmt); // 重写sql.
+  // rewrite_sql(stmt); // 重写sql.
   int ret = OB_SUCCESS;
   LinkExecCtxGuard link_guard(result.get_session(), result.get_exec_context());
   FLTSpanGuard(sql_compile);

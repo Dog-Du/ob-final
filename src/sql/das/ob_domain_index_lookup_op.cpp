@@ -44,6 +44,8 @@ int ObDomainIndexLookupOp::init(
     doc_id_lookup_rtdef_ = doc_id_lookup_rtdef;
     need_scan_aux_ = (doc_id_lookup_ctdef_ != nullptr);
   }
+
+  // LOG_INFO("this", K(*this));
   return ret;
 }
 
@@ -61,6 +63,9 @@ int ObDomainIndexLookupOp::reset_lookup_state()
 
 int ObDomainIndexLookupOp::next_state()
 {
+  // need_scan_aux_ == true : INDEX_SCAN -> AUX_LOOKUP -> DO_LOOKUP -> OUTPUT_ROWS;
+  // need_scan_aux_ == false : INDEX_SCAN -> DO_LOOKUP -> OUTPUT_ROWS;
+
   INIT_SUCC(ret);
   if (state_ == INDEX_SCAN) {
     if (0 == lookup_rowkey_cnt_) {
@@ -474,6 +479,8 @@ int ObMulValueIndexLookupOp::init(const ObDASBaseCtDef *table_lookup_ctdef,
       LOG_WARN("ObLocalIndexLookupOp init failed", K(ret));
     }
   }
+
+  // LOG_INFO("this", K(scan_param_), K(doc_id_scan_param_));
   return ret;
 }
 

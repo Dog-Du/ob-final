@@ -70,7 +70,7 @@ public:
            transaction::ObTxReadSnapshot *snapshot,
            storage::ObTableScanParam &scan_param);
 
-  virtual int get_next_row() ;
+  virtual int get_next_row();
   virtual int get_next_rows(int64_t &count, int64_t capacity) override;
   void set_doc_id_idx_tablet_id(const ObTabletID &doc_id_idx_tablet_id)
   { doc_id_idx_tablet_id_ = doc_id_idx_tablet_id; }
@@ -114,6 +114,7 @@ protected:
   ObObj doc_id_key_obj_;
 
   bool need_scan_aux_;
+  bool need_scan_table_;
 
   static const int64_t SORT_MEMORY_LIMIT = 48L * 1024L * 1024L;
   static const int64_t MAX_NUM_PER_BATCH = 1000;
