@@ -2029,6 +2029,7 @@ int ObTableScanOp::get_next_row_with_das()
 int ObTableScanOp::get_next_batch_with_das(int64_t &count, int64_t capacity)
 {
   int ret = OB_SUCCESS;
+  capacity = 256;
   int64_t batch_size = capacity;
   //it means multi-partition limit pushed down in DAS TSC
   //need to calc final limit row

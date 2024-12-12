@@ -39,167 +39,195 @@ namespace sql
 // need_scan_aux_ == true : INDEX_SCAN -> AUX_LOOKUP -> DO_LOOKUP -> OUTPUT_ROWS;
 // need_scan_aux_ == false : INDEX_SCAN -> DO_LOOKUP -> OUTPUT_ROWS;
 
-// int ObVectorIndexLookupOp::get_next_row()
-// {
-//   int ret = OB_SUCCESS;
-//   bool got_next_row = false;
-//   while (OB_SUCC(ret) && !got_next_row) {
-//     switch (state_) {
-//       case INDEX_SCAN: {
-//         reset_lookup_state();
-//         if (OB_FAIL(fetch_index_table_rowkey())) {
-//           if (OB_UNLIKELY(ret != OB_ITER_END)) {
-//             LOG_WARN("failed get index table rowkey", K(ret));
-//           } else {
-//             index_end_ = true;
-//             ret = OB_SUCCESS;
-//           }
-//         } else {
-//           ++lookup_rowkey_cnt_;
-//         }
+int ObVectorIndexLookupOp::next_state()
+{
+  // need_scan_aux_ == true : INDEX_SCAN -> AUX_LOOKUP -> DO_LOOKUP -> OUTPUT_ROWS;
+  // need_scan_aux_ == false : INDEX_SCAN -> DO_LOOKUP -> OUTPUT_ROWS;
 
-//         if (FAILEDx(ObDomainIndexLookupOp::next_state())) {
-//           LOG_WARN("failed to switch to next lookup state", K(ret), K(state_));
-//         }
-//         break;
-//       }
-//       case AUX_LOOKUP: {
-//         if (OB_FAIL(get_aux_table_rowkey())) {
-//           if (ret != OB_ITER_END) {
-//             LOG_WARN("do aux index lookup failed", K(ret));
-//           }
-//         } else {
-//           // ++lookup_rowkey_cnt_;
-//           if (OB_FAIL(ObDomainIndexLookupOp::next_state())) {
-//             LOG_WARN("failed to switch to next lookup state", K(ret), K(state_));
-//           }
-//         }
-//         break;
-//       }
-//       case DO_LOOKUP: {
-//         if (OB_FAIL(do_index_lookup())) {
-//           LOG_WARN("do index lookup failed", K(ret));
-//         } else if (OB_FAIL(ObDomainIndexLookupOp::next_state())) {
-//           LOG_WARN("failed to switch to next lookup state", K(ret), K(state_));
-//         }
-//         break;
-//       }
-//       case OUTPUT_ROWS: {
-//         if (OB_FAIL(get_next_row_from_data_table())) {
-//           if (OB_ITER_END == ret) {
-//             ret = OB_SUCCESS;
-//             if (OB_FAIL(check_lookup_row_cnt())) {
-//               LOG_WARN("failed to check lookup row cnt", K(ret));
-//             } else if (OB_FAIL(ObDomainIndexLookupOp::next_state())) {
-//               LOG_WARN("failed to switch to next lookup state", K(ret));
-//             }
-//           } else {
-//             LOG_WARN("look up get next row failed", K(ret));
-//           }
-//         } else {
-//           got_next_row = true;
-//           ++lookup_row_cnt_;
-//           LOG_DEBUG("got next row from table lookup",  K(ret), K(lookup_row_cnt_), K(lookup_rowkey_cnt_), "main table output", ROWEXPR2STR(get_eval_ctx(), get_output_expr()) );
-//         }
-//         break;
-//       }
-//       case FINISHED: {
-//         ret = OB_ITER_END;
-//         break;
-//       }
-//       default: {
-//         ret = OB_ERR_UNEXPECTED;
-//         LOG_WARN("unexpected state", K(state_));
-//       }
-//     }
-//   }
+  INIT_SUCC(ret);
+  if (state_ == INDEX_SCAN) {
+    if (0 == lookup_rowkey_cnt_) {
+      state_ = LookupState::FINISHED;
+    } else if (need_scan_aux_) {
+      state_ = LookupState::AUX_LOOKUP;
+    } else {
+      state_ = LookupState::DO_LOOKUP;
+    }
+  } else if (state_ == LookupState::AUX_LOOKUP) {
+    state_ = LookupState::DO_LOOKUP;
+  } else if (state_ == LookupState::DO_LOOKUP) {
+    state_ = LookupState::OUTPUT_ROWS;
+  } else if (state_ == LookupState::OUTPUT_ROWS) {
+    state_ = LookupState::INDEX_SCAN;
+  } else {
+    ret = OB_ERR_UNEXPECTED;
+  }
+  LOG_DEBUG("domain index to next state", K(ret), K(state_));
+  return ret;
+}
 
-//   return ret;
-// }
+int ObVectorIndexLookupOp::get_next_row()
+{
+  int ret = OB_SUCCESS;
+  bool got_next_row = false;
+  while (OB_SUCC(ret) && !got_next_row) {
+    switch (state_) {
+      case INDEX_SCAN: {
+        reset_lookup_state();
+        if (OB_FAIL(fetch_index_table_rowkey())) {
+          if (OB_UNLIKELY(ret != OB_ITER_END)) {
+            LOG_WARN("failed get index table rowkey", K(ret));
+          } else {
+            index_end_ = true;
+            ret = OB_SUCCESS;
+          }
+        } else {
+          ++lookup_rowkey_cnt_;
+        }
 
+        if (FAILEDx(next_state())) {
+          LOG_WARN("failed to switch to next lookup state", K(ret), K(state_));
+        }
+        break;
+      }
+      case AUX_LOOKUP: {
+        if (OB_FAIL(get_aux_table_rowkey())) {
+          if (ret != OB_ITER_END) {
+            LOG_WARN("do aux index lookup failed", K(ret));
+          }
+        } else {
+          // ++lookup_rowkey_cnt_;
+          if (OB_FAIL(next_state())) {
+            LOG_WARN("failed to switch to next lookup state", K(ret), K(state_));
+          }
+        }
+        break;
+      }
+      case DO_LOOKUP: {
+        if (OB_FAIL(do_index_lookup())) {
+          LOG_WARN("do index lookup failed", K(ret));
+        } else if (OB_FAIL(next_state())) {
+          LOG_WARN("failed to switch to next lookup state", K(ret), K(state_));
+        }
+        break;
+      }
+      case OUTPUT_ROWS: {
+        if (OB_FAIL(get_next_row_from_data_table())) {
+          if (OB_ITER_END == ret) {
+            ret = OB_SUCCESS;
+            if (OB_FAIL(check_lookup_row_cnt())) {
+              LOG_WARN("failed to check lookup row cnt", K(ret));
+            } else if (OB_FAIL(next_state())) {
+              LOG_WARN("failed to switch to next lookup state", K(ret));
+            }
+          } else {
+            LOG_WARN("look up get next row failed", K(ret));
+          }
+        } else {
+          got_next_row = true;
+          ++lookup_row_cnt_;
+          LOG_DEBUG("got next row from table lookup",  K(ret), K(lookup_row_cnt_), K(lookup_rowkey_cnt_), "main table output", ROWEXPR2STR(get_eval_ctx(), get_output_expr()) );
+        }
+        break;
+      }
+      case FINISHED: {
+        ret = OB_ITER_END;
+        break;
+      }
+      default: {
+        ret = OB_ERR_UNEXPECTED;
+        LOG_WARN("unexpected state", K(state_));
+      }
+    }
+  }
 
-// int ObVectorIndexLookupOp::get_next_rows(int64_t &count, int64_t capacity)
-// {
-//   int ret = OB_SUCCESS;
-//   bool got_next_row = false;
-//   while (OB_SUCC(ret) && !got_next_row) {
-//     switch (state_) {
-//       case INDEX_SCAN: {
-//         reset_lookup_state();
-//         int64_t rowkey_count = 0;
-//         lookup_row_cnt_ = 0;
-//         lookup_row_cnt_ = 0;
-//         if (OB_FAIL(fetch_index_table_rowkeys(rowkey_count, capacity))) {
-//           LOG_WARN("failed get rowkeys from index table", K(ret));
-//         } else if (0 == rowkey_count) {
-//           index_end_ = true;
-//         }
-//         if (OB_SUCC(ret)) {
-//           if (rowkey_count > 0) {
-//             lookup_rowkey_cnt_ += rowkey_count;
-//           }
-//           if (OB_FAIL(ObDomainIndexLookupOp::next_state())) {
-//             LOG_WARN("failed to switch to next lookup state", K(ret), K(state_));
-//           }
-//         }
-//         break;
-//       }
-//       case AUX_LOOKUP: {
-//         if (OB_FAIL(get_aux_table_rowkeys(lookup_rowkey_cnt_))) {
-//           if (ret != OB_ITER_END) {
-//             LOG_WARN("do aux index lookup failed", K(ret));
-//           }
-//         } else if (OB_FAIL(ObDomainIndexLookupOp::next_state())) {
-//           LOG_WARN("failed to switch to next lookup state", K(ret), K(state_));
-//         }
-//         break;
-//       }
-//       case DO_LOOKUP: {
-//         lookup_row_cnt_ = 0;
-//         if (OB_FAIL(do_index_lookup())) {
-//           LOG_WARN("do index lookup failed", K(ret));
-//         } else if (OB_FAIL(ObDomainIndexLookupOp::next_state())) {
-//           LOG_WARN("failed to switch to next lookup state", K(ret), K(state_));
-//         }
-//         break;
-//       }
-//       case OUTPUT_ROWS: {
-//         if (OB_FAIL(get_next_rows_from_data_table(count, capacity))) {
-//           if (OB_ITER_END == ret) {
-//             ret = OB_SUCCESS;
-//             if (count > 0) {
-//               lookup_row_cnt_ += count;
-//               got_next_row = true;
-//             } else if (OB_FAIL(check_lookup_row_cnt())) {
-//               LOG_WARN("failed to check table lookup", K(ret));
-//             } else if (OB_FAIL(ObDomainIndexLookupOp::next_state())) {
-//               LOG_WARN("failed to switch to next lookup state", K(ret), K_(state));
-//             }
-//           } else {
-//             LOG_WARN("look up get next row failed", K(ret));
-//           }
-//         } else {
-//           got_next_row = true;
-//           lookup_row_cnt_ += count;
-//           const ObBitVector *skip = nullptr;
-//           PRINT_VECTORIZED_ROWS(SQL, DEBUG, get_eval_ctx(), get_output_expr(), count, skip,
-//                                 K(ret), K(lookup_row_cnt_), K(lookup_rowkey_cnt_));
-//         }
-//         break;
-//       }
-//       case FINISHED: {
-//         ret = OB_ITER_END;
-//         break;
-//       }
-//       default: {
-//         ret = OB_ERR_UNEXPECTED;
-//         LOG_WARN("unexpected state", K(state_));
-//       }
-//     }
-//   }
+  return ret;
+}
 
-//   return ret;
-// }
+int ObVectorIndexLookupOp::get_next_rows(int64_t &count, int64_t capacity)
+{
+  int ret = OB_SUCCESS;
+  bool got_next_row = false;
+  capacity = 256;
+  
+  while (OB_SUCC(ret) && !got_next_row) {
+    switch (state_) {
+      case INDEX_SCAN: {
+        reset_lookup_state();
+        int64_t rowkey_count = 0;
+        lookup_row_cnt_ = 0;
+        lookup_row_cnt_ = 0;
+        if (OB_FAIL(fetch_index_table_rowkeys(rowkey_count, capacity))) {
+          LOG_WARN("failed get rowkeys from index table", K(ret));
+        } else if (0 == rowkey_count) {
+          index_end_ = true;
+        }
+        if (OB_SUCC(ret)) {
+          if (rowkey_count > 0) {
+            lookup_rowkey_cnt_ += rowkey_count;
+          }
+          if (OB_FAIL(next_state())) {
+            LOG_WARN("failed to switch to next lookup state", K(ret), K(state_));
+          }
+        }
+        break;
+      }
+      case AUX_LOOKUP: {
+        if (OB_FAIL(get_aux_table_rowkeys(lookup_rowkey_cnt_))) {
+          if (ret != OB_ITER_END) {
+            LOG_WARN("do aux index lookup failed", K(ret));
+          }
+        } else if (OB_FAIL(next_state())) {
+          LOG_WARN("failed to switch to next lookup state", K(ret), K(state_));
+        }
+        break;
+      }
+      case DO_LOOKUP: {
+        lookup_row_cnt_ = 0;
+        if (OB_FAIL(do_index_lookup())) {
+          LOG_WARN("do index lookup failed", K(ret));
+        } else if (OB_FAIL(next_state())) {
+          LOG_WARN("failed to switch to next lookup state", K(ret), K(state_));
+        }
+        break;
+      }
+      case OUTPUT_ROWS: {
+        if (OB_FAIL(get_next_rows_from_data_table(count, capacity))) {
+          if (OB_ITER_END == ret) {
+            ret = OB_SUCCESS;
+            if (count > 0) {
+              lookup_row_cnt_ += count;
+              got_next_row = true;
+            } else if (OB_FAIL(check_lookup_row_cnt())) {
+              LOG_WARN("failed to check table lookup", K(ret));
+            } else if (OB_FAIL(next_state())) {
+              LOG_WARN("failed to switch to next lookup state", K(ret), K_(state));
+            }
+          } else {
+            LOG_WARN("look up get next row failed", K(ret));
+          }
+        } else {
+          got_next_row = true;
+          lookup_row_cnt_ += count;
+          const ObBitVector *skip = nullptr;
+          PRINT_VECTORIZED_ROWS(SQL, DEBUG, get_eval_ctx(), get_output_expr(), count, skip,
+                                K(ret), K(lookup_row_cnt_), K(lookup_rowkey_cnt_));
+        }
+        break;
+      }
+      case FINISHED: {
+        ret = OB_ITER_END;
+        break;
+      }
+      default: {
+        ret = OB_ERR_UNEXPECTED;
+        LOG_WARN("unexpected state", K(state_));
+      }
+    }
+  }
+
+  return ret;
+}
 
 int ObVectorIndexLookupOp::init(const ObDASBaseCtDef *table_lookup_ctdef,
                                 ObDASBaseRtDef *table_lookup_rtdef,

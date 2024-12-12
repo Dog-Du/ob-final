@@ -64,8 +64,8 @@ public:
     vec_index_param_(),
     dim_(0) {}
   virtual ~ObVectorIndexLookupOp() {};
-  // virtual int get_next_row() override;
-  // virtual int get_next_rows(int64_t &count, int64_t capacity) override;
+  virtual int get_next_row() override;
+  virtual int get_next_rows(int64_t &count, int64_t capacity) override;
 
   int init(const ObDASBaseCtDef *table_lookup_ctdef,
             ObDASBaseRtDef *table_lookup_rtdef,
@@ -125,7 +125,7 @@ private:
   int next_state(ObVidAdaLookupStatus& cur_states,
                   ObVectorQueryAdaptorResultContext& ada_ctx,
                   bool& is_continue);
-
+  int next_state() override;
   int set_lookup_vid_key();
   int set_lookup_vid_key(ObRowkey& doc_id_rowkey);
   int set_lookup_vid_keys(ObNewRow *row, int64_t count);

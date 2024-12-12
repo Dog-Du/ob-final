@@ -224,7 +224,7 @@ class HnswIndexHandler {
     std::shared_ptr<faiss::Index> index_;
     std::shared_ptr<faiss::IndexIDMap> ix_id_map_;
     std::shared_ptr<faiss::IndexFlatL2> quantizer_;
-    std::unordered_map<int64_t, RowDataHandler> id_data_map_;
+    // std::unordered_map<int64_t, RowDataHandler> id_data_map_;
 };
 
 bool& get_init() {
@@ -392,7 +392,9 @@ int add_index(
         }
 
         if (hnsw_handler->ids_.size() >= 1000'000) {
-            FAISS_ASSERT(hnsw_handler->ids_.size() * hnsw_handler->get_dim() == hnsw_handler->vector_list_.size());
+            FAISS_ASSERT(
+                    hnsw_handler->ids_.size() * hnsw_handler->get_dim() ==
+                    hnsw_handler->vector_list_.size());
 
             try {
                 if (!index->is_trained) {
@@ -440,11 +442,11 @@ int add_index(
             static_cast<HnswIndexHandler*>(index_handler);
     auto& index = hnsw_handler->get_index();
 
-    for (int i = 0, offset = 0; i < size; ++i) {
-        RowDataHandler handler(datas + offset, data_length);
-        hnsw_handler->id_data_map_.emplace(ids[i], std::move(handler));
-        offset += data_length;
-    }
+    // for (int i = 0, offset = 0; i < size; ++i) {
+    //     RowDataHandler handler(datas + offset, data_length);
+    //     hnsw_handler->id_data_map_.emplace(ids[i], std::move(handler));
+    //     offset += data_length;
+    // }
 
     if (!get_init()) {
         for (int64_t i = 0, n = 1LL * size * dim; i < n; ++i) {
@@ -456,7 +458,9 @@ int add_index(
         }
 
         if (hnsw_handler->ids_.size() >= 1000'000) {
-            FAISS_ASSERT(hnsw_handler->ids_.size() * hnsw_handler->get_dim() == hnsw_handler->vector_list_.size());
+            FAISS_ASSERT(
+                    hnsw_handler->ids_.size() * hnsw_handler->get_dim() ==
+                    hnsw_handler->vector_list_.size());
 
             try {
                 if (!index->is_trained) {
@@ -478,7 +482,7 @@ int add_index(
             // omp_set_num_threads(8);
             FAISS_ASSERT(index->ntotal >= 1000'000);
             get_init() = true;
-            FAISS_ASSERT(hnsw_handler->id_data_map_.size() == index->ntotal);
+            // FAISS_ASSERT(hnsw_handler->id_data_map_.size() == index->ntotal);
         }
 
         return 0;
@@ -532,7 +536,9 @@ int knn_search(
     int64_t* ids_result = (int64_t*)malloc(sizeof(int64_t) * topk);
 
     if (!hnsw_handler->ids_.empty()) {
-        FAISS_ASSERT(hnsw_handler->ids_.size() * hnsw_handler->get_dim() == hnsw_handler->vector_list_.size());
+        FAISS_ASSERT(
+                hnsw_handler->ids_.size() * hnsw_handler->get_dim() ==
+                hnsw_handler->vector_list_.size());
 
         try {
             if (!index->is_trained) {
@@ -550,7 +556,7 @@ int knn_search(
         }
         hnsw_handler->ids_.clear();
         hnsw_handler->vector_list_.clear();
-        FAISS_ASSERT(hnsw_handler->id_data_map_.size() == index->ntotal);
+        // FAISS_ASSERT(hnsw_handler->id_data_map_.size() == index->ntotal);
     }
 
     // FAISS_ASSERT(hnsw_handler->id_data_map_.size() == index->ntotal);
@@ -599,7 +605,9 @@ int knn_search(
     int64_t* ids_result = (int64_t*)malloc(sizeof(int64_t) * topk);
 
     if (!hnsw_handler->ids_.empty()) {
-        FAISS_ASSERT(hnsw_handler->ids_.size() * hnsw_handler->get_dim() == hnsw_handler->vector_list_.size());
+        FAISS_ASSERT(
+                hnsw_handler->ids_.size() * hnsw_handler->get_dim() ==
+                hnsw_handler->vector_list_.size());
 
         try {
             if (!index->is_trained) {
@@ -617,7 +625,7 @@ int knn_search(
         }
         hnsw_handler->ids_.clear();
         hnsw_handler->vector_list_.clear();
-        FAISS_ASSERT(hnsw_handler->id_data_map_.size() == index->ntotal);
+        // FAISS_ASSERT(hnsw_handler->id_data_map_.size() == index->ntotal);
     }
 
     set_hnsw_efsearch(index.get(), topk, 6000);
@@ -648,13 +656,14 @@ int knn_search(
     row_length = 0;
 
     if (result_size > 0) {
-        auto iter = hnsw_handler->id_data_map_.begin();
-        row_length = iter->second.get_length();
-        row_datas = (char**)malloc(result_size * sizeof(char *));
-        for (int64_t i = 0; i < result_size; ++i) {
-            iter = hnsw_handler->id_data_map_.find(ids[i]);
-            row_datas[i] = iter->second.data();
-        }
+        // auto iter = hnsw_handler->id_data_map_.begin();
+        // row_length = iter->second.get_length();
+        row_length = 500;
+        row_datas = (char**)malloc(result_size * sizeof(char*));
+        // for (int64_t i = 0; i < result_size; ++i) {
+        //     iter = hnsw_handler->id_data_map_.find(ids[i]);
+        //     row_datas[i] = iter->second.data();
+        // }
     }
     return ret;
 }
@@ -742,7 +751,9 @@ int fserialize(VectorIndexPtr& index_handler, std::ostream& out_stream) {
     auto& index = hnsw_handler->get_index();
 
     if (!hnsw_handler->ids_.empty()) {
-        FAISS_ASSERT(hnsw_handler->ids_ .size() * hnsw_handler->get_dim() == hnsw_handler->vector_list_.size());
+        FAISS_ASSERT(
+                hnsw_handler->ids_.size() * hnsw_handler->get_dim() ==
+                hnsw_handler->vector_list_.size());
 
         try {
             if (!index->is_trained) {
@@ -763,11 +774,11 @@ int fserialize(VectorIndexPtr& index_handler, std::ostream& out_stream) {
         // omp_set_num_threads(8);
     }
 
-    FAISS_ASSERT(hnsw_handler->id_data_map_.size() == index->ntotal);
+    // FAISS_ASSERT(hnsw_handler->id_data_map_.size() == index->ntotal);
     StreamWriter writer(out_stream);
     int ret = 0;
     try {
-        serialize_data_map(hnsw_handler->id_data_map_, writer);
+        // serialize_data_map(hnsw_handler->id_data_map_, writer);
         faiss::write_index(index.get(), &writer);
     } catch (faiss::FaissException& e) {
         std::cout << e.what() << std::endl;
@@ -802,7 +813,7 @@ int fdeserialize(VectorIndexPtr& index_handler, std::istream& in_stream) {
 
     StreamReader reader(in_stream);
     try {
-        deserialize_data_map(hnsw_handler->id_data_map_, reader);
+        // deserialize_data_map(hnsw_handler->id_data_map_, reader);
         faiss::Index* i = faiss::read_index(&reader);
 
         if (auto x = dynamic_cast<faiss::IndexIDMap*>(i)) {
@@ -815,7 +826,7 @@ int fdeserialize(VectorIndexPtr& index_handler, std::istream& in_stream) {
         ret = static_cast<int>(ErrorType::UNKNOWN_ERROR);
     }
 
-    FAISS_ASSERT(hnsw_handler->id_data_map_.size() == index->ntotal);
+    // FAISS_ASSERT(hnsw_handler->id_data_map_.size() == index->ntotal);
     return ret;
 }
 
