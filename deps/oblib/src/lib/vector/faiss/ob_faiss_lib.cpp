@@ -307,7 +307,7 @@ int create_index(
     bool is_support = is_supported_index(index_type);
 
     if (is_support) {
-        omp_set_num_threads(8);
+        omp_set_num_threads(10);
         // create index
         std::shared_ptr<faiss::Index> index;
         std::shared_ptr<faiss::IndexIDMap> ix_id_map;
