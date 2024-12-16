@@ -27,7 +27,7 @@
 #include "faiss/impl/FaissException.h"
 #include "faiss/impl/HNSW.h"
 
-namespace obvectorlib {
+namespace ob_faiss_lib {
 
 enum class ErrorType {
     // start with 1, 0 is reserved
@@ -137,9 +137,13 @@ class RowDataHandler { // 对列数据进行简单的内存管理
         return data_;
     }
 
-   private:
+   protected:
     char* data_ = nullptr;
     uint32_t data_length_;
+};
+
+class VectorDataHandler : public RowDataHandler {
+
 };
 
 class HnswIndexHandler {
@@ -224,6 +228,7 @@ class HnswIndexHandler {
     std::shared_ptr<faiss::Index> index_;
     std::shared_ptr<faiss::IndexIDMap> ix_id_map_;
     std::shared_ptr<faiss::IndexFlatL2> quantizer_;
+
     // std::unordered_map<int64_t, RowDataHandler> id_data_map_;
 };
 
@@ -804,7 +809,7 @@ int fdeserialize(VectorIndexPtr& index_handler, std::istream& in_stream) {
                  dim,
                  max_degree,
                  ef_construction,
-                 ef_search)) != 0) {
+                 ef_search, nullptr)) != 0) {
         return ret;
     }
 

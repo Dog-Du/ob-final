@@ -422,11 +422,15 @@ if (NOT OB_BUILD_CDC)
 target_link_directories(
   oblib_lib PUBLIC
   ${DEP_DIR}/lib ${DEP_DIR}/lib/vsag_lib ${DEP_DIR}/lib/faiss ${DEP_DIR}/lib/faiss/faiss
+  ${DEP_DIR}/lib/NGT/lib/NGT ${DEP_DIR}/lib/NGT/lib ${DEP_DIR}/lib/NGT
   ${CMAKE_BINARY_DIR}/deps/oblib/src/lib/vector/vsag_lib
   ${CMAKE_BINARY_DIR}/deps/oblib/src/lib/vector/faiss
   ${CMAKE_BINARY_DIR}/deps/oblib/src/lib/vector/vsag_lib/src
   ${CMAKE_BINARY_DIR}/deps/oblib/src/lib/vector/faiss/faiss
   ${CMAKE_BINARY_DIR}/deps/oblib/src/lib/vector/faiss/c_api
+  ${CMAKE_BINARY_DIR}/deps/oblib/src/lib/vector/NGT/lib/NGT
+  ${CMAKE_BINARY_DIR}/deps/oblib/src/lib/vector/NGT/lib
+  ${CMAKE_BINARY_DIR}/deps/oblib/src/lib/vector/NGT
   ${CMAKE_BINARY_DIR}/_deps/fmt-build
 )
 
@@ -448,6 +452,9 @@ if (NOT OB_BUILD_VSAG_RPM)
     # libfaiss_avx2.a
     # libfaiss.a
     libfaiss_lib.a
+
+    libngt.a
+    libob_ngt_lib.a
 
     libob_vsag_static_test.a
     libcpuinfo.a
@@ -475,6 +482,9 @@ else()
     # libfaiss.a
     libfaiss_lib.a
 
+    libngt.a
+    libob_ngt_lib.a
+
     libob_vsag_static.a
     libcpuinfo.a
     libsimd.a
@@ -500,6 +510,9 @@ elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
     # libfaiss_avx2.a
     # libfaiss.a
     libfaiss_lib.a
+
+    libngt.a
+    libob_ngt_lib.a
 
     libob_vsag_static_test.a
     libcpuinfo.a

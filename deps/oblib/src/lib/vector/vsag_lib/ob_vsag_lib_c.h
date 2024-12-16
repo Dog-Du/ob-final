@@ -17,7 +17,7 @@
 
 
 
-namespace vsag_lib {
+namespace ob_vsag_lib {
 #ifdef __cplusplus
 extern "C" {
 #endif

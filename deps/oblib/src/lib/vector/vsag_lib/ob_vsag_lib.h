@@ -5,18 +5,14 @@
 #include <map>
 #include <omp.h>
 
-namespace vsag_lib {
+namespace ob_vsag_lib {
 
 // // 暂时只有HNSW索引，同时操作只有创建索引，删除索引，对索引插入，对索引搜索。不支持对索引删除
 
 int64_t example();
 typedef void* VectorIndexPtr;
 extern bool is_init_;
-enum IndexType {
-  INVALID_INDEX_TYPE = -1,
-  HNSW_TYPE = 0,  // 看来暂时只支持 HNSW。
-  MAX_INDEX_TYPE
-};
+enum IndexType { INVALID_INDEX_TYPE = -1, HNSW_TYPE = 0, MAX_INDEX_TYPE };
 
 // 吐槽，为什么vsag库里面有好几个TODO，oceanbase里面也是有几个TODO，
 /**
@@ -52,7 +48,7 @@ extern bool is_supported_index(IndexType index_type);
 extern int create_index(VectorIndexPtr& index_handler, IndexType index_type,
                         const char* dtype,
                         const char* metric,int dim,
-                        int max_degree, int ef_construction, int ef_search, void* allocator = NULL);
+                        int max_degree, int ef_construction, int ef_search, void* allocator);
 
 extern int build_index(VectorIndexPtr& index_handler, float* vector_list, int64_t* ids, int dim, int size);
 
@@ -61,7 +57,7 @@ extern int add_index(VectorIndexPtr& index_handler, float* vector, int64_t* ids,
 extern int get_index_number(VectorIndexPtr& index_handler, int64_t &size);
 extern int knn_search(VectorIndexPtr& index_handler,float* query_vector, int dim, int64_t topk,
                       const float*& dist, const int64_t*& ids, int64_t &result_size, int ef_search,
-                       void* invalid = NULL);
+                       void* invalid);
 extern int serialize(VectorIndexPtr& index_handler, const std::string dir);
 extern int deserialize_bin(VectorIndexPtr& index_handler, const std::string dir);
 extern int fserialize(VectorIndexPtr& index_handler, std::ostream& out_stream);

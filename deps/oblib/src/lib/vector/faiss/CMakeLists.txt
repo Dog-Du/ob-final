@@ -9,6 +9,7 @@ project(faiss
   LANGUAGES ${FAISS_LANGUAGES})
 include(GNUInstallDirs)
 
+set(CMAKE_BUILD_TYPE "Release")
 set(CMAKE_CXX_STANDARD 17)
 set(OpenMP_gomp_LIBRARY "-fopenmp")
 set(OpenMP_CXX_FLAGS "-fopenmp")
@@ -38,7 +39,6 @@ add_library(faiss_lib ob_faiss_lib.cpp)
 target_link_libraries(faiss_lib PRIVATE faiss_avx512)
 target_link_libraries(faiss_lib PRIVATE OpenMP::OpenMP_CXX)
 add_dependencies(faiss_lib faiss_avx512)
-
 
 if (FAISS_TEST)
   add_executable(faiss_test_test_test faiss_test.cpp)

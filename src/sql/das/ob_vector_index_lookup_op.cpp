@@ -62,7 +62,7 @@ int ObVectorIndexLookupOp::next_state()
   } else {
     ret = OB_ERR_UNEXPECTED;
   }
-  LOG_DEBUG("domain index to next state", K(ret), K(state_));
+  // LOG_DEBUG("domain index to next state", K(ret), K(state_));
   return ret;
 }
 
@@ -126,7 +126,7 @@ int ObVectorIndexLookupOp::get_next_row()
         } else {
           got_next_row = true;
           ++lookup_row_cnt_;
-          LOG_DEBUG("got next row from table lookup",  K(ret), K(lookup_row_cnt_), K(lookup_rowkey_cnt_), "main table output", ROWEXPR2STR(get_eval_ctx(), get_output_expr()) );
+         //  LOG_DEBUG("got next row from table lookup",  K(ret), K(lookup_row_cnt_), K(lookup_rowkey_cnt_), "main table output", ROWEXPR2STR(get_eval_ctx(), get_output_expr()) );
         }
         break;
       }
@@ -209,9 +209,6 @@ int ObVectorIndexLookupOp::get_next_rows(int64_t &count, int64_t capacity)
         } else {
           got_next_row = true;
           lookup_row_cnt_ += count;
-          const ObBitVector *skip = nullptr;
-          PRINT_VECTORIZED_ROWS(SQL, DEBUG, get_eval_ctx(), get_output_expr(), count, skip,
-                                K(ret), K(lookup_row_cnt_), K(lookup_rowkey_cnt_));
         }
         break;
       }

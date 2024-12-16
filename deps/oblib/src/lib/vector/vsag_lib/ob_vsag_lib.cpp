@@ -21,7 +21,7 @@
 #include "vsag/logger.h"
 #include "vsag/options.h"
 
-namespace vsag_lib {
+namespace ob_vsag_lib {
 
 struct SlowTaskTimer {
     SlowTaskTimer(const std::string& name, int64_t log_threshold_ms = 0);

@@ -1,0 +1,6 @@
+if( ${UNIX} )
+	include_directories("${PROJECT_SOURCE_DIR}/lib" "${PROJECT_BINARY_DIR}/lib/")
+	if(NOT DEFINED NGT_QBG_DISABLED)
+		add_subdirectory("${PROJECT_SOURCE_DIR}/samples/qg-l2-float")
+	endif()
+endif()

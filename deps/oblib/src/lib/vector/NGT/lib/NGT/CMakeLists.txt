@@ -1,0 +1,86 @@
+if( ${UNIX} )
+	option(NGT_SHARED_MEMORY_ALLOCATOR "enable shared memory" OFF)
+	configure_file(${CMAKE_CURRENT_SOURCE_DIR}/defines.h.in ${CMAKE_CURRENT_BINARY_DIR}/defines.h)
+	include_directories("${CMAKE_CURRENT_BINARY_DIR}" "${PROJECT_SOURCE_DIR}/lib" "${PROJECT_BINARY_DIR}/lib/")
+
+	if(${NGT_QBG_DISABLED})
+		file(GLOB NGT_SOURCES *.cpp)
+	else()
+		file(GLOB NGT_SOURCES *.cpp NGTQ/*.cpp)
+	endif()
+	file(GLOB HEADER_FILES *.h *.hpp)
+	file(GLOB NGTQ_HEADER_FILES NGTQ/*.h NGTQ/*.hpp)
+
+	add_library(ngtstatic STATIC ${NGT_SOURCES})
+	set_target_properties(ngtstatic PROPERTIES OUTPUT_NAME ngt)
+	set_target_properties(ngtstatic PROPERTIES COMPILE_FLAGS "-fPIC")
+	target_link_libraries(ngtstatic)
+	if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+		target_link_libraries(ngtstatic OpenMP::OpenMP_CXX)
+	endif()
+
+	add_library(ngt SHARED ${NGT_SOURCES})
+	set_target_properties(ngt PROPERTIES VERSION ${ngt_VERSION})
+	set_target_properties(ngt PROPERTIES SOVERSION ${ngt_SOVERSION})
+	add_dependencies(ngt ngtstatic)
+
+	add_custom_command(OUTPUT command DEPENDS ${NGT_SOURCES} WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} COMMAND sh ${PROJECT_SOURCE_DIR}/utils/mk_version_defs_h.sh ${PROJECT_SOURCE_DIR} version_defs.h)
+	add_custom_target(versiondef DEPENDS command)
+	add_dependencies(ngtstatic versiondef)
+
+	if(NOT DEFINED NGT_QBG_DISABLED OR (NOT ${NGT_QBG_DISABLED}))
+		# 首选使用 MKL
+		find_package(MKL QUIET)
+		if (MKL_FOUND)
+				message(STATUS "MKL found, linking MKL libraries")
+				target_link_libraries(ngt PRIVATE ${MKL_LIBRARIES})
+				target_link_libraries(ngtstatic PRIVATE ${MKL_LIBRARIES})
+		else()
+				# 如果 MKL 不可用，尝试使用 OpenBLAS 或标准 BLAS/LAPACK
+				find_package(OpenBLAS QUIET)
+				if (OpenBLAS_FOUND)
+						message(STATUS "OpenBLAS found, linking OpenBLAS libraries")
+						target_link_libraries(ngt PRIVATE OpenBLAS::OpenBLAS)
+						target_link_libraries(ngtstatic PRIVATE OpenBLAS::OpenBLAS)
+				else()
+						find_package(BLAS REQUIRED)
+						find_package(LAPACK REQUIRED)
+						message(STATUS "Using standard BLAS/LAPACK")
+						target_link_libraries(ngt PRIVATE ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES})
+						target_link_libraries(ngtstatic PRIVATE ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES})
+				endif()
+		endif()
+	else()
+		# 首选使用 MKL
+		find_package(MKL QUIET)
+		if (MKL_FOUND)
+				message(STATUS "MKL found, linking MKL libraries")
+				target_link_libraries(ngt PRIVATE ${MKL_LIBRARIES})
+				target_link_libraries(ngtstatic PRIVATE ${MKL_LIBRARIES})
+		else()
+				# 如果 MKL 不可用，尝试使用 OpenBLAS 或标准 BLAS/LAPACK
+				find_package(OpenBLAS QUIET)
+				if (OpenBLAS_FOUND)
+						message(STATUS "OpenBLAS found, linking OpenBLAS libraries")
+						target_link_libraries(ngt PRIVATE OpenBLAS::OpenBLAS)
+						target_link_libraries(ngtstatic PRIVATE OpenBLAS::OpenBLAS)
+				else()
+						find_package(BLAS REQUIRED)
+						find_package(LAPACK REQUIRED)
+						message(STATUS "Using standard BLAS/LAPACK")
+						target_link_libraries(ngt PRIVATE ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES})
+						target_link_libraries(ngtstatic PRIVATE ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES})
+				endif()
+		endif()
+	endif()
+
+
+	install(TARGETS
+		ngt
+		ngtstatic
+		RUNTIME DESTINATION bin
+		LIBRARY DESTINATION lib
+		ARCHIVE DESTINATION lib)
+	install(FILES ${HEADER_FILES} ${CMAKE_CURRENT_BINARY_DIR}/defines.h  ${CMAKE_CURRENT_BINARY_DIR}/version_defs.h DESTINATION include/NGT)
+	install(FILES ${NGTQ_HEADER_FILES} DESTINATION include/NGT/NGTQ)
+endif()

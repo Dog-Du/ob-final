@@ -6,14 +6,20 @@
 #include <iostream>
 #include <map>
 
-namespace obvectorlib {
+namespace ob_faiss_lib {
 
 // 暂时只有HNSW索引，同时操作只有创建索引，删除索引，对索引插入，对索引搜索。不支持对索引删除
 
 int64_t example();
 typedef void* VectorIndexPtr;
+
+#ifndef OB_VSAG_LIB_H
 extern bool is_init_;
 enum IndexType { INVALID_INDEX_TYPE = -1, HNSW_TYPE = 0, MAX_INDEX_TYPE };
+#else
+using namespace obvectorlib;
+#endif
+
 /**
  *   * Get the version based on git revision
  *     *
@@ -52,7 +58,7 @@ extern int create_index(
         int max_degree,
         int ef_construction,
         int ef_search,
-        void* allocator = NULL);
+        void* allocator);
 
 extern int build_index(
         VectorIndexPtr& index_handler,
@@ -88,7 +94,7 @@ extern int knn_search(
         const int64_t*& ids,
         int64_t& result_size,
         int ef_search,
-        void* invalid = NULL);
+        void* invalid);
 
 extern int knn_search(
         VectorIndexPtr& index_handler,
