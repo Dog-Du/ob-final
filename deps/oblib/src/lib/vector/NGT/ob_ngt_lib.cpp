@@ -139,7 +139,7 @@ public:
     std::vector<std::vector<float>> vector_list_;
     std::vector<int64_t> ids_;
     std::shared_ptr<NGT::Index> index_;
-    NGTQG::Index* ngtqg_index_;
+    // NGTQG::Index* ngtqg_index_;
 };
 
 int64_t
@@ -177,10 +177,10 @@ version() {
     return "DogDu's NGT in OceanBase.";
 }
 
-NGTQG::Index*
-get_ngtqg_index(NGT::Index* index) {
-    return dynamic_cast<NGTQG::Index*>(index);
-}
+// NGTQG::Index*
+// get_ngtqg_index(NGT::Index* index) {
+//     return dynamic_cast<NGTQG::Index*>(index);
+// }
 
 bool
 directory_exists(const char* path) {
@@ -250,7 +250,7 @@ create_index(VectorIndexPtr& index_handler,
     hnsw_handler->is_created_ = false;
     hnsw_handler->dim_ = dim;
     hnsw_handler->index_.reset(new NGT::Index(hnsw_handler->index_path_));
-    hnsw_handler->ngtqg_index_ = nullptr;
+    // hnsw_handler->ngtqg_index_ = nullptr;
     index_handler = hnsw_handler;
     return 0;
 }
@@ -333,7 +333,7 @@ add_index(VectorIndexPtr& index_handler,
             }
 
             if (hnsw_handler->is_qg_ == true) {
-                hnsw_handler->id_map_[hnsw_handler->ngtqg_index_->insert(obj)] = ids[i];
+                // hnsw_handler->id_map_[hnsw_handler->ngtqg_index_->insert(obj)] = ids[i];
             } else {
                 hnsw_handler->id_map_[hnsw_handler->index_->insert(obj)] = ids[i];
             }
@@ -390,14 +390,14 @@ knn_search(VectorIndexPtr& index_handler,
 
     NGT::ObjectDistances objects;
     if (hnsw_handler->is_qg_ == true) {
-        NGTQG::SearchQuery qg_sc(query);
-        qg_sc.setResults(&objects);
-        qg_sc.setEpsilon(0.02);
-        qg_sc.setSize(topk);
-        // qg_sc.radius = 1.02;
-        qg_sc.edgeSize = 96;
+        // NGTQG::SearchQuery qg_sc(query);
+        // qg_sc.setResults(&objects);
+        // qg_sc.setEpsilon(0.02);
+        // qg_sc.setSize(topk);
+        // // qg_sc.radius = 1.02;
+        // qg_sc.edgeSize = 96;
 
-        hnsw_handler->ngtqg_index_->search(qg_sc);
+        // hnsw_handler->ngtqg_index_->search(qg_sc);
     } else {
         NGT::SearchQuery qg_sc(query);
         qg_sc.setResults(&objects);
@@ -509,10 +509,10 @@ fdeserialize(VectorIndexPtr& index_handler, std::istream& in_stream) {
     read_id_map(hnsw_handler->id_map_, in_stream);
 
     if (hnsw_handler->is_qg_ == true) {
-        hnsw_handler->ngtqg_index_ = new NGTQG::Index(hnsw_handler->index_path_);
-        hnsw_handler->index_.reset(hnsw_handler->ngtqg_index_);
+        //  hnsw_handler->ngtqg_index_ = new NGTQG::Index(hnsw_handler->index_path_);
+        //  hnsw_handler->index_.reset(hnsw_handler->ngtqg_index_);
     } else {
-        hnsw_handler->ngtqg_index_ = nullptr;
+        // hnsw_handler->ngtqg_index_ = nullptr;
         hnsw_handler->index_.reset(new NGT::Index(hnsw_handler->index_path_));
     }
 
