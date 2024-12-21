@@ -17,16 +17,16 @@
 #pragma once
 
 // Begin of cmake defines
-#cmakedefine NGT_SHARED_MEMORY_ALLOCATOR	// use shared memory for indexes
-#cmakedefine NGT_GRAPH_CHECK_VECTOR		// use vector to check whether accessed
-#cmakedefine NGT_AVX_DISABLED			// not use avx
-#cmakedefine NGT_AVX2				// use avx2
-#cmakedefine NGT_LARGE_DATASET			// more than 10M objects
-#cmakedefine NGT_DISTANCE_COMPUTATION_COUNT	// count # of distance computations
+#cmakedefine NGT_SHARED_MEMORY_ALLOCATOR     // use shared memory for indexes
+#cmakedefine NGT_GRAPH_CHECK_VECTOR          // use vector to check whether accessed
+#cmakedefine NGT_AVX_DISABLED                // not use avx
+#cmakedefine NGT_AVX2                        // use avx2
+#cmakedefine NGT_LARGE_DATASET               // more than 10M objects
+#cmakedefine NGT_DISTANCE_COMPUTATION_COUNT  // count # of distance computations
 #cmakedefine NGT_QBG_DISABLED
 #cmakedefine NGTQG_ZERO_GLOBAL
 #cmakedefine NGTQG_NO_ROTATION
-#cmakedefine NGT_BFLOAT_DISABLED		// not use bfloat
+#cmakedefine NGT_BFLOAT_DISABLED  // not use bfloat
 #cmakedefine NGT_BFLOAT_ENABLED
 #cmakedefine NGT_GRAPH_COMPACT_READ_ONLY_GRAPH
 #cmakedefine NGT_ENABLE_TIME_SEED_FOR_RANDOM
@@ -38,31 +38,31 @@
 //#define		NGT_DISTANCE_COMPUTATION_COUNT
 //#define		NGT_SEARCH_TIMER
 
-#define		NGT_CREATION_EDGE_SIZE			10
-#define		NGT_EXPLORATION_COEFFICIENT		1.1
-#define		NGT_INSERTION_EXPLORATION_COEFFICIENT	1.1
-#define		NGT_SHARED_MEMORY_MAX_SIZE		1024	// MB
-#define		NGT_FORCED_REMOVE		// When errors occur due to the index inconsistency, ignore them.
+#define NGT_CREATION_EDGE_SIZE 10
+#define NGT_EXPLORATION_COEFFICIENT 1.1
+#define NGT_INSERTION_EXPLORATION_COEFFICIENT 1.1
+#define NGT_SHARED_MEMORY_MAX_SIZE 1024  // MB
+#define NGT_FORCED_REMOVE  // When errors occur due to the index inconsistency, ignore them.
 
-#define		NGT_COMPACT_VECTOR
-#define		NGT_GRAPH_READ_ONLY_GRAPH
-#define		NGT_HALF_FLOAT
+#define NGT_COMPACT_VECTOR
+#define NGT_GRAPH_READ_ONLY_GRAPH
+#define NGT_HALF_FLOAT
 
-#ifdef	NGT_BFLOAT_ENABLED
- #define		NGT_BFLOAT
+#ifdef NGT_BFLOAT_ENABLED
+#define NGT_BFLOAT
 #endif
-#ifdef	NGT_BFLOAT_DISABLED
- #undef			NGT_BFLOAT
+#ifdef NGT_BFLOAT_DISABLED
+#undef NGT_BFLOAT
 #endif
 
-#ifdef	NGT_LARGE_DATASET
- #define	NGT_GRAPH_CHECK_HASH_BASED_BOOLEAN_SET
+#ifdef NGT_LARGE_DATASET
+#define NGT_GRAPH_CHECK_HASH_BASED_BOOLEAN_SET
 #else
- #define	NGT_GRAPH_CHECK_VECTOR
+#define NGT_GRAPH_CHECK_VECTOR
 #endif
 
-#ifdef	NGT_SHARED_MEMORY_ALLOCATOR
- #define	NGT_QBG_DISABLED
+#ifdef NGT_SHARED_MEMORY_ALLOCATOR
+#define NGT_QBG_DISABLED
 #endif
 
 #define NGT_REFINEMENT
@@ -72,14 +72,24 @@
 #elif defined(NGT_AVX2)
 #undef NGT_AVX512
 #else
-#if defined(__AVX512F__) && defined(__AVX512DQ__)
-#if defined(__AVX512VNNI__)
-#endif
-#define NGT_AVX512
-#elif defined(__AVX2__)
+// #if defined(__AVX512F__) && defined(__AVX512DQ__)
+// #if defined(__AVX512VNNI__)
+// #endif
+// #define NGT_AVX512
+// #elif defined(__AVX2__)
+// #define NGT_AVX2
+// #else
+// #define NGT_NO_AVX
+// #endif
 #define NGT_AVX2
-#else
-#define NGT_NO_AVX
-#endif
+#define NGT_AVX512
+
+#ifndef __AVX512__
+#define __AVX512__
 #endif
 
+#ifndef __AVX2__
+#define __AVX2__
+#endif
+
+#endif

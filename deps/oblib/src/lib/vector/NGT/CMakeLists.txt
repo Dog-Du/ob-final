@@ -4,15 +4,16 @@ project(ngt)
 
 # For QG, it is recommended to disable rotation of the vector space and residual vectors to improve performance as follows.
 # cmake -DNGTQG_NO_ROTATION=ON -DNGTQG_ZERO_GLOBAL=ON ..
-set(NGTQG_NO_ROTATION ON)
-set(NGTQG_ZERO_GLOBAL ON)
+set(NGTQG_NO_ROTATION OFF)
+set(NGTQG_ZERO_GLOBAL OFF)
 
 set(NGT_AVX_DISABLED OFF)
 set(NGT_OPENMP_DISABLED OFF)
 set(NGT_MARCH_NATIVE_DISABLED OFF)
 set(NGT_SHARED_MEMORY_ALLOCATOR OFF)
 set(NGT_QBG_DISABLED ON)
-set(NGT_LARGE_DATASET ON)
+set(NGT_LARGE_DATASET OFF)
+
 
 file(STRINGS "VERSION" ngt_VERSION)
 message(STATUS "VERSION: ${ngt_VERSION}")

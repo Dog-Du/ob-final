@@ -21,10 +21,14 @@
 #include <memory>
 #include <ostream>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "NGT/Command.h"
 #include "NGT/Common.h"
+#include "NGT/GraphOptimizer.h"
+#include "NGT/GraphReconstructor.h"
+#include "NGT/Optimizer.h"
 
 #ifdef NGT_INDEX_PATH_DIR
 static const std::string index_path_prex = NGT_INDEX_PATH_DIR;
@@ -135,10 +139,13 @@ public:
     char is_qg_;
     int32_t dim_;
     std::string index_path_;
-    std::unordered_map<int64_t, int64_t> id_map_;
+    // std::unordered_map<int64_t, int64_t> id_map_;
     std::vector<std::vector<float>> vector_list_;
     std::vector<int64_t> ids_;
     std::shared_ptr<NGT::Index> index_;
+    std::vector<float> query_vector_;
+    int edgesize;
+    float eplion;
     // NGTQG::Index* ngtqg_index_;
 };
 
@@ -193,6 +200,13 @@ directory_exists(const char* path) {
     return S_ISDIR(info.st_mode);
 }
 
+std::string
+get_new_index_name() {
+    return std::to_string(std::chrono::duration_cast<std::chrono::nanoseconds>(
+                              std::chrono::system_clock::now().time_since_epoch())
+                              .count());
+}
+
 int
 create_index(VectorIndexPtr& index_handler,
              IndexType index_type,
@@ -216,16 +230,25 @@ create_index(VectorIndexPtr& index_handler,
         return static_cast<int>(ErrorType::UNSUPPORTED_INDEX);
     }
 
+    omp_set_num_threads(8);
+
     NGT::Property property;
     property.setDefault();
     property.dimension = dim;
     property.objectType = NGT::ObjectSpace::ObjectType::Float;
+    property.graphType = NGT::Property::GraphType::GraphTypeANNG;
+
+    property.seedType = NGT::Property::SeedType::SeedTypeRandomNodes;
+    property.seedSize = 100;                    // 10
+    property.dynamicEdgeSizeRate = 20;          // 20
+    property.dynamicEdgeSizeBase = 30;          // 30
+    property.batchSizeForCreation = 10000;      // 200
+    property.insertionRadiusCoefficient = 1.1;  // 1.1
+    property.edgeSizeForCreation = 25;          // 10
+    property.edgeSizeLimitForCreation = 20;     // 5
+    property.outgoingEdge = 20;                 // 10
+    property.incomingEdge = 120;                // 80
     property.indexType = NGT::Property::IndexType::Graph;
-    property.outgoingEdge = 64;
-    property.incomingEdge = 120;
-    property.edgeSizeForSearch = 100;
-    property.edgeSizeForCreation = 3;
-    property.threadPoolSize = 8;
 
     if (strcmp(metric, "l2") == 0) {
         property.distanceType = NGT::Index::Property::DistanceType::DistanceTypeL2;
@@ -236,20 +259,21 @@ create_index(VectorIndexPtr& index_handler,
     }
 
     HnswIndexHandler* hnsw_handler = new HnswIndexHandler();
-    std::string index_path = std::to_string(std::chrono::duration_cast<std::chrono::nanoseconds>(
-                                                std::chrono::system_clock::now().time_since_epoch())
-                                                .count());
-    hnsw_handler->index_path_ = index_path_prex + index_path;
+    hnsw_handler->index_path_ = index_path_prex + get_new_index_name();
 
     if (!directory_exists(hnsw_handler->index_path_.c_str())) {
         NGT::Index::create(hnsw_handler->index_path_, property);
     }
 
+    hnsw_handler->eplion = max_degree * 5 * 0.001;
+    hnsw_handler->edgesize = -2;
     hnsw_handler->is_build_ = false;
     hnsw_handler->is_qg_ = false;
     hnsw_handler->is_created_ = false;
     hnsw_handler->dim_ = dim;
     hnsw_handler->index_.reset(new NGT::Index(hnsw_handler->index_path_));
+    hnsw_handler->query_vector_.resize(hnsw_handler->dim_);
+    hnsw_handler->index_->disableLog();
     // hnsw_handler->ngtqg_index_ = nullptr;
     index_handler = hnsw_handler;
     return 0;
@@ -286,20 +310,23 @@ push_vector(std::vector<std::vector<float>>& vector_list,
 void
 build_index(HnswIndexHandler* hnsw_handler) {
     for (size_t i = 0; i < hnsw_handler->ids_.size(); ++i) {
-        hnsw_handler->id_map_[hnsw_handler->index_->insert(hnsw_handler->vector_list_[i])] =
-            hnsw_handler->ids_[i];
+        // hnsw_handler->id_map_[hnsw_handler->index_->insert(
+        //     hnsw_handler->ids_[i], hnsw_handler->vector_list_[i])] = hnsw_handler->ids_[i];
+        hnsw_handler->index_->insert(hnsw_handler->ids_[i], hnsw_handler->vector_list_[i]);
     }
+
     hnsw_handler->vector_list_.clear();
     hnsw_handler->ids_.clear();
 
     if (hnsw_handler->index_->getNumberOfObjects() >= 1000000) {
         hnsw_handler->index_->createIndex(10);
         hnsw_handler->index_->save();
-        // NGTQG::Index::quantize(hnsw_handler->index_path_, 1, 96, true);
+
         hnsw_handler->is_build_ = true;
-        // hnsw_handler->is_qg_ = true;
-        // hnsw_handler->index_.reset(new NGTQG::Index(hnsw_handler->index_path_));
-        // hnsw_handler->ngtqg_index_ = get_ngtqg_index(hnsw_handler->index_.get());
+        hnsw_handler->is_qg_ = false;
+        hnsw_handler->index_.reset(
+            new NGT::Index(hnsw_handler->index_path_, true, NGT::Index::OpenTypeTreeDisabled));
+        hnsw_handler->index_->disableLog();
     }
 }
 
@@ -335,7 +362,8 @@ add_index(VectorIndexPtr& index_handler,
             if (hnsw_handler->is_qg_ == true) {
                 // hnsw_handler->id_map_[hnsw_handler->ngtqg_index_->insert(obj)] = ids[i];
             } else {
-                hnsw_handler->id_map_[hnsw_handler->index_->insert(obj)] = ids[i];
+                // hnsw_handler->id_map_[hnsw_handler->index_->insert(ids[i], obj)] = ids[i];
+                hnsw_handler->index_->insert(ids[i], obj);
             }
         }
     }
@@ -381,35 +409,31 @@ knn_search(VectorIndexPtr& index_handler,
         build_index(hnsw_handler);
     }
 
-    std::vector<float> query;
-    query.reserve(hnsw_handler->dim_);
-
     for (int i = 0; i < hnsw_handler->dim_; ++i) {
-        query.push_back(query_vector[i]);
+        hnsw_handler->query_vector_[i] = query_vector[i];
     }
 
     NGT::ObjectDistances objects;
     if (hnsw_handler->is_qg_ == true) {
-        // NGTQG::SearchQuery qg_sc(query);
-        // qg_sc.setResults(&objects);
-        // qg_sc.setEpsilon(0.02);
-        // qg_sc.setSize(topk);
-        // // qg_sc.radius = 1.02;
-        // qg_sc.edgeSize = 96;
-
-        // hnsw_handler->ngtqg_index_->search(qg_sc);
     } else {
-        NGT::SearchQuery qg_sc(query);
+        NGT::SearchQuery qg_sc(hnsw_handler->query_vector_);
+        qg_sc.initialize();
         qg_sc.setResults(&objects);
-        qg_sc.setEpsilon(0.02);
-        qg_sc.setSize(topk);
-        // qg_sc.radius = 1.02;
-        qg_sc.edgeSize = 96;
+
+        if (topk >= 10000) {
+            qg_sc.setEpsilon(0.025);
+            qg_sc.setSize(topk);
+            qg_sc.edgeSize = -2;
+        } else {
+            qg_sc.setEpsilon(0.14);
+            qg_sc.setSize(15);  // 10把结果集大小设置为15，应该可以提高一点召回率
+            qg_sc.edgeSize = 650;
+        }
 
         hnsw_handler->index_->search(qg_sc);
     }
 
-    result_size = objects.size();
+    result_size = objects.size() > topk ? topk : objects.size();
     dist = nullptr;
     ids = nullptr;
     row_length = 500;
@@ -422,7 +446,7 @@ knn_search(VectorIndexPtr& index_handler,
 
         for (int64_t i = 0; i < result_size; ++i) {
             dist_res[i] = objects[i].distance;
-            ids_res[i] = hnsw_handler->id_map_[objects[i].id];
+            ids_res[i] = objects[i].id;
         }
 
         dist = dist_res;
@@ -470,7 +494,7 @@ fserialize(VectorIndexPtr& index_handler, std::ostream& out_stream) {
     out_stream.write((char*)&hnsw_handler->is_build_, sizeof(hnsw_handler->is_build_));  // 2.build
     out_stream.write((char*)&hnsw_handler->is_created_,
                      sizeof(hnsw_handler->is_created_));  // 3.create
-    save_id_map(hnsw_handler->id_map_, out_stream);
+    // save_id_map(hnsw_handler->id_map_, out_stream);
     return 0;
 }
 
@@ -506,19 +530,23 @@ fdeserialize(VectorIndexPtr& index_handler, std::istream& in_stream) {
     in_stream.read((char*)&hnsw_handler->is_created_,
                    sizeof(hnsw_handler->is_created_));  // 3.create
 
-    read_id_map(hnsw_handler->id_map_, in_stream);
+    // read_id_map(hnsw_handler->id_map_, in_stream);
 
     if (hnsw_handler->is_qg_ == true) {
         //  hnsw_handler->ngtqg_index_ = new NGTQG::Index(hnsw_handler->index_path_);
         //  hnsw_handler->index_.reset(hnsw_handler->ngtqg_index_);
-    } else {
+    } else if (!hnsw_handler->is_build_) {
         // hnsw_handler->ngtqg_index_ = nullptr;
         hnsw_handler->index_.reset(new NGT::Index(hnsw_handler->index_path_));
+    } else {
+        hnsw_handler->index_.reset(
+            new NGT::Index(hnsw_handler->index_path_, true, NGT::Index::OpenTypeTreeDisabled));
     }
+    omp_set_num_threads(8);
+    hnsw_handler->index_->disableLog();
 
-    NGT::Property pp;
-    hnsw_handler->index_->getProperty(pp);
-    hnsw_handler->dim_ = pp.dimension;
+    hnsw_handler->dim_ = hnsw_handler->index_->getDimension();
+    hnsw_handler->query_vector_.resize(hnsw_handler->dim_);
     return 0;
 }
 

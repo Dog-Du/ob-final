@@ -631,6 +631,8 @@ void NeighborhoodGraph::searchReadOnlyGraph(NGT::SearchContainer &sc, ObjectDist
     sc.explorationCoefficient = NGT_EXPLORATION_COEFFICIENT;
   }
 
+  // edgesize, epsilon, radius
+  
   // setup edgeSize
   size_t edgeSize = getEdgeSize(sc);
 
@@ -642,7 +644,7 @@ void NeighborhoodGraph::searchReadOnlyGraph(NGT::SearchContainer &sc, ObjectDist
   setupDistances(sc, seeds, COMPARATOR::compare);
   setupSeeds(sc, seeds, results, unchecked, distanceChecked);
 
-  Distance explorationRadius = sc.explorationCoefficient * sc.radius;
+  double explorationRadius = (double)1.0 * sc.explorationCoefficient * sc.radius;
   const size_t dimension   = objectSpace->getPaddedDimension();
   ReadOnlyGraphNode *nodes = &searchRepository.front();
   ObjectDistance result;
@@ -685,9 +687,9 @@ void NeighborhoodGraph::searchReadOnlyGraph(NGT::SearchContainer &sc, ObjectDist
 #ifdef NGT_DISTANCE_COMPUTATION_COUNT
       sc.distanceComputationCount++;
 #endif
-      Distance distance =
+      double distance =
           COMPARATOR::compare((void *)&sc.object[0],
-                              (void *)&(*static_cast<PersistentObject *>(neighborptr->second))[0], dimension);
+                              (void *)&(*static_cast<PersistentObject *>(neighborptr->second))[0], dimension); // 这里返回的是double，但是用的是float接受。。。
       if (distance <= explorationRadius) {
         result.set(neighborptr->first, distance);
         unchecked.push(result);
@@ -696,7 +698,7 @@ void NeighborhoodGraph::searchReadOnlyGraph(NGT::SearchContainer &sc, ObjectDist
           if (results.size() > sc.size) {
             results.pop();
             sc.radius         = results.top().distance;
-            explorationRadius = sc.explorationCoefficient * sc.radius;
+            explorationRadius = (double)1.0 * sc.explorationCoefficient * sc.radius;
           }
         }
       }

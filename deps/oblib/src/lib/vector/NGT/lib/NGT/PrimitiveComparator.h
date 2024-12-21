@@ -131,7 +131,7 @@ class PrimitiveComparator {
       diff0 = static_cast<COMPARE_TYPE>(*a++) - static_cast<COMPARE_TYPE>(*b++);
       d += diff0 * diff0;
     }
-    return sqrt(static_cast<double>(d));
+    return static_cast<double>(d);
   }
 
   inline static double compareL2(const uint8_t *a, const uint8_t *b, size_t size) {
@@ -209,7 +209,7 @@ class PrimitiveComparator {
     _mm_store_ps(f, sum128);
 
     double s = f[0] + f[1] + f[2] + f[3];
-    return sqrt(s);
+    return s;
   }
 
 #ifdef NGT_HALF_FLOAT
@@ -262,7 +262,7 @@ class PrimitiveComparator {
     __m128 tmp = _mm_hadd_ps(sum128, _mm_set1_ps(0));
     double s = _mm_cvtss_f32(_mm_shuffle_ps(tmp, tmp, _MM_SHUFFLE(0, 0, 0, 0))) +
                _mm_cvtss_f32(_mm_shuffle_ps(tmp, tmp, _MM_SHUFFLE(0, 0, 0, 1)));
-    return sqrt(s);
+    return s;
     //return s;
   }
 #endif
@@ -315,7 +315,7 @@ class PrimitiveComparator {
       int d = (int)*a++ - (int)*b++;
       s += d * d;
     }
-    return sqrt(s);
+    return s;
   }
 
   inline static double compareL2(const quint8 *a, const quint8 *b, size_t size) {
@@ -410,7 +410,7 @@ class PrimitiveComparator {
       i8a++;
       i8b++;
     }
-    return sqrt(sum);
+    return sum;
   }
 
   inline static double compareL2(const qsint8 *a, const quint8 *b, size_t size) {

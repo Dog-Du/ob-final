@@ -82,6 +82,7 @@ class qsint8 {
   int8_t value;
 };
 
+
 #ifdef NGT_BFLOAT
 class bfloat16 {
  public:

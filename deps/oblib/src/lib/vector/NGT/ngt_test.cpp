@@ -82,7 +82,7 @@ read_index(obvectorlib::VectorIndexPtr& index_handler) {
     assert(obvectorlib::delete_index(index_handler) == 0);
     assert(
         obvectorlib::create_index(
-            index_handler, obvectorlib::IndexType::HNSW_TYPE, "float32", "l2", 128, 10, 300, 10) ==
+            index_handler, obvectorlib::IndexType::HNSW_TYPE, "float32", "l2", 128, 10, 300, 10, nullptr) ==
         0);
 
     std::ifstream file("index.data");
@@ -110,7 +110,7 @@ main() {
     std::vector<int64_t> ids;
     assert(
         obvectorlib::create_index(
-            index_handler, obvectorlib::IndexType::HNSW_TYPE, "float32", "l2", dim, 10, 300, 10) ==
+            index_handler, obvectorlib::IndexType::HNSW_TYPE, "float32", "l2", dim, 10, 300, 10, nullptr) ==
         0);
 
     generate_vector_list(vector_list, ids, dim, size);
@@ -129,11 +129,6 @@ main() {
                                       1,
                                       data,
                                       length) == 0);
-
-        if (i % 100000 == 0) {
-            std::ofstream file("index.data");
-            assert(obvectorlib::fserialize(index_handler, file) == 0);
-        }
     }
 
     auto end_time = std::chrono::high_resolution_clock::now();
