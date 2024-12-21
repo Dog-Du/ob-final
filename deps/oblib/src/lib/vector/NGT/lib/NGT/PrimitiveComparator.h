@@ -28,8 +28,7 @@ namespace NGT {
 
 class MemoryCache {
  public:
-  inline static void prefetch(unsigned char *ptr, const size_t byteSizeOfObject) {
-#if !defined(NGT_NO_AVX)
+  inline static void prefetch(unsigned char *ptr, const size_t byteSizeOfObject) { // 这个是用来减少cache miss的，但是真的有用吗？ -> 真有用
     switch ((byteSizeOfObject - 1) >> 6) {
     default:
     case 28: _mm_prefetch(ptr, _MM_HINT_T0); ptr += 64;
@@ -65,7 +64,6 @@ class MemoryCache {
       ptr += 64;
       break;
     }
-#endif
   }
   inline static void *alignedAlloc(const size_t allocSize) {
 #ifdef NGT_NO_AVX
@@ -208,8 +206,8 @@ class PrimitiveComparator {
     __attribute__((aligned(32))) float f[4];
     _mm_store_ps(f, sum128);
 
-    double s = f[0] + f[1] + f[2] + f[3];
-    return s;
+    return f[0] + f[1] + f[2] + f[3];
+    // return s;
   }
 
 #ifdef NGT_HALF_FLOAT

@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <cstddef>
 #include <cstdio>
 #include <cstring>
 
@@ -33,11 +34,16 @@
 #include <arm_neon.h>
 #endif
 
+#include <x86intrin.h>
+
 namespace faiss {
 
 #ifdef __AVX__
 #define USE_AVX
 #endif
+
+#define PORTABLE_ALIGN32 __attribute__((aligned(32)))
+#define PORTABLE_ALIGN64 __attribute__((aligned(64)))
 
 /*********************************************************
  * Optimized distance computations
@@ -200,29 +206,28 @@ FAISS_PRAGMA_IMPRECISE_FUNCTION_END
 
 FAISS_PRAGMA_IMPRECISE_FUNCTION_BEGIN
 float fvec_norm_L2sqr(const float* x, size_t d) {
-    // the double in the _ref is suspected to be a typo. Some of the manual
-    // implementations this replaces used float.
-    float res = 0;
-    FAISS_PRAGMA_IMPRECISE_LOOP
-    for (size_t i = 0; i != d; ++i) {
-        res += x[i] * x[i];
-    }
-
-    return res;
+    return fvec_L2sqr(x, x, d);
 }
 FAISS_PRAGMA_IMPRECISE_FUNCTION_END
 
 FAISS_PRAGMA_IMPRECISE_FUNCTION_BEGIN
-float fvec_L2sqr(const float* x, const float* y, size_t d) {
-    size_t i;
-    float res = 0;
-    FAISS_PRAGMA_IMPRECISE_LOOP
-    for (i = 0; i < d; i++) {
-        const float tmp = x[i] - y[i];
-        res += tmp * tmp;
+float fvec_L2sqr(const float* a, const float* b, size_t size) {
+    const float *last = a + size;
+     __m512 sum512 = _mm512_setzero_ps();
+    while (a < last) {
+      __m512 v = _mm512_sub_ps(_mm512_loadu_ps(a), _mm512_loadu_ps(b));
+      sum512 = _mm512_add_ps(sum512, _mm512_mul_ps(v, v));
+      a += 16;
+      b += 16;
     }
-    return res;
+
+    __m256 sum256 = _mm256_add_ps(_mm512_extractf32x8_ps(sum512, 0), _mm512_extractf32x8_ps(sum512, 1));
+    __m128 sum128 = _mm_add_ps(_mm256_extractf128_ps(sum256, 0), _mm256_extractf128_ps(sum256, 1));
+    __attribute__((aligned(32))) float f[4];
+    _mm_store_ps(f, sum128);
+    return f[0] + f[1] + f[2] + f[3];
 }
+
 FAISS_PRAGMA_IMPRECISE_FUNCTION_END
 
 /// Special version of inner product that computes 4 distances
@@ -272,26 +277,34 @@ void fvec_L2sqr_batch_4(
         float& dis1,
         float& dis2,
         float& dis3) {
-    float d0 = 0;
-    float d1 = 0;
-    float d2 = 0;
-    float d3 = 0;
-    FAISS_PRAGMA_IMPRECISE_LOOP
-    for (size_t i = 0; i < d; ++i) {
-        const float q0 = x[i] - y0[i];
-        const float q1 = x[i] - y1[i];
-        const float q2 = x[i] - y2[i];
-        const float q3 = x[i] - y3[i];
-        d0 += q0 * q0;
-        d1 += q1 * q1;
-        d2 += q2 * q2;
-        d3 += q3 * q3;
-    }
 
-    dis0 = d0;
-    dis1 = d1;
-    dis2 = d2;
-    dis3 = d3;
+    // dis0 = fvec_L2sqr(x, y0, d);
+    // dis1 = fvec_L2sqr(x, y1, d);
+    // dis2 = fvec_L2sqr(x, y2, d);
+    // dis3 = fvec_L2sqr(x, y3, d);
+
+    #pragma omp parallel sections
+    {
+        #pragma omp section
+        {
+            dis0 = fvec_L2sqr(x, y0, d);
+        }
+
+        #pragma omp section
+        {
+            dis1 = fvec_L2sqr(x, y1, d);
+        }
+
+        #pragma omp section
+        {
+            dis2 = fvec_L2sqr(x, y2, d);
+        }
+
+        #pragma omp section
+        {
+            dis3 = fvec_L2sqr(x, y3, d);
+        }
+    }
 }
 FAISS_PRAGMA_IMPRECISE_FUNCTION_END
 

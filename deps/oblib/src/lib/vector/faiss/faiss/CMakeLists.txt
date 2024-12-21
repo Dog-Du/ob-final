@@ -240,7 +240,7 @@ endif()
 # Export FAISS_HEADERS variable to parent scope.
 set(FAISS_HEADERS ${FAISS_HEADERS} PARENT_SCOPE)
 
-add_library(faiss ${FAISS_SRC})
+# add_library(faiss ${FAISS_SRC})
 
 add_library(faiss_avx2 ${FAISS_SRC})
 if(NOT FAISS_OPT_LEVEL STREQUAL "avx2" AND NOT FAISS_OPT_LEVEL STREQUAL "avx512")
@@ -298,8 +298,8 @@ if(NOT WIN32)
 endif()
 
 # Handle `#include <faiss/foo.h>`.
-target_include_directories(faiss PUBLIC
-  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>)
+# target_include_directories(faiss PUBLIC
+#  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>)
 # Handle `#include <faiss/foo.h>`.
 target_include_directories(faiss_avx2 PUBLIC
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>)
@@ -310,13 +310,13 @@ target_include_directories(faiss_avx512 PUBLIC
 target_include_directories(faiss_sve PUBLIC
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>)
 
-set_target_properties(faiss faiss_avx2 faiss_avx512 faiss_sve PROPERTIES
+set_target_properties(faiss_avx2 faiss_avx512 faiss_sve PROPERTIES
   POSITION_INDEPENDENT_CODE ON
   WINDOWS_EXPORT_ALL_SYMBOLS ON
 )
 
 if(WIN32)
-  target_compile_definitions(faiss PRIVATE FAISS_MAIN_LIB)
+  # target_compile_definitions(faiss PRIVATE FAISS_MAIN_LIB)
   target_compile_definitions(faiss_avx2 PRIVATE FAISS_MAIN_LIB)
   target_compile_definitions(faiss_avx512 PRIVATE FAISS_MAIN_LIB)
   target_compile_definitions(faiss_sve PRIVATE FAISS_MAIN_LIB)
@@ -324,11 +324,14 @@ endif()
 
 string(FIND "${CMAKE_CXX_FLAGS}" "FINTEGER" finteger_idx)
 if (${finteger_idx} EQUAL -1)
-  target_compile_definitions(faiss PRIVATE FINTEGER=int)
+  # target_compile_definitions(faiss PRIVATE FINTEGER=int)
 endif()
 target_compile_definitions(faiss_avx2 PRIVATE FINTEGER=int)
 target_compile_definitions(faiss_avx512 PRIVATE FINTEGER=int)
 target_compile_definitions(faiss_sve PRIVATE FINTEGER=int)
+
+target_compile_definitions(faiss_avx512 PRIVATE __AVX512F__=1)
+target_compile_definitions(faiss_avx512 PRIVATE __AVX__=1)
 
 if(FAISS_USE_LTO)
   include(CheckIPOSupported)
@@ -336,7 +339,7 @@ if(FAISS_USE_LTO)
 
   if (ipo_supported)
     message(STATUS "LTO enabled")
-    set_property(TARGET faiss PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+    # set_property(TARGET faiss PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
     set_property(TARGET faiss_avx2 PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
     set_property(TARGET faiss_avx512 PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
   else()
@@ -351,37 +354,32 @@ set(OpenMP_CXX_LIB_NAMES "omp")
 set(OpenMP_C_FLAGS "-fopenmp")
 set(OpenMP_C_LIB_NAMES "omp")
 find_package(OpenMP REQUIRED)
-target_link_libraries(faiss PRIVATE OpenMP::OpenMP_CXX)
+# target_link_libraries(faiss PRIVATE OpenMP::OpenMP_CXX)
 target_link_libraries(faiss_avx2 PRIVATE OpenMP::OpenMP_CXX)
 target_link_libraries(faiss_avx512 PRIVATE OpenMP::OpenMP_CXX)
 target_link_libraries(faiss_sve PRIVATE OpenMP::OpenMP_CXX)
 
 find_package(MKL)
 if(MKL_FOUND)
-  target_link_libraries(faiss PRIVATE ${MKL_LIBRARIES})
+  # target_link_libraries(faiss PRIVATE ${MKL_LIBRARIES})
   target_link_libraries(faiss_avx2 PRIVATE ${MKL_LIBRARIES})
   target_link_libraries(faiss_avx512 PRIVATE ${MKL_LIBRARIES})
 else()
   find_package(BLAS QUIET)
-  target_link_libraries(faiss PRIVATE ${BLAS_LIBRARIES})
+  # target_link_libraries(faiss PRIVATE ${BLAS_LIBRARIES})
   target_link_libraries(faiss_avx2 PRIVATE ${BLAS_LIBRARIES})
   target_link_libraries(faiss_avx512 PRIVATE ${BLAS_LIBRARIES})
   target_link_libraries(faiss_sve PRIVATE ${BLAS_LIBRARIES})
 
   find_package(LAPACK QUIET)
-  target_link_libraries(faiss PRIVATE ${LAPACK_LIBRARIES})
+  # target_link_libraries(faiss PRIVATE ${LAPACK_LIBRARIES})
   target_link_libraries(faiss_avx2 PRIVATE ${LAPACK_LIBRARIES})
   target_link_libraries(faiss_avx512 PRIVATE ${LAPACK_LIBRARIES})
   target_link_libraries(faiss_sve PRIVATE ${LAPACK_LIBRARIES})
 endif()
 
-install(TARGETS faiss
-  EXPORT faiss-targets
-  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-)
+
+
 if(FAISS_OPT_LEVEL STREQUAL "avx2")
   install(TARGETS faiss_avx2
     EXPORT faiss-targets
@@ -424,9 +422,5 @@ configure_file(${PROJECT_SOURCE_DIR}/cmake/faiss-config.cmake.in
 )
 install(FILES ${PROJECT_BINARY_DIR}/cmake/faiss-config.cmake
   ${PROJECT_BINARY_DIR}/cmake/faiss-config-version.cmake
-  DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/faiss
-)
-
-install(EXPORT faiss-targets
   DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/faiss
 )

@@ -16,6 +16,7 @@
 
 #include "defines.h"
 #include "Graph.h"
+#include <cstddef>
 #include "Thread.h"
 #include "Index.h"
 
@@ -627,12 +628,14 @@ void NeighborhoodGraph::searchReadOnlyGraph(NGT::SearchContainer &sc, ObjectDist
 template <typename COMPARATOR, typename CHECK_LIST>
 void NeighborhoodGraph::searchReadOnlyGraph(NGT::SearchContainer &sc, ObjectDistances &seeds) {
 
-  if (sc.explorationCoefficient == 0.0) {
-    sc.explorationCoefficient = NGT_EXPLORATION_COEFFICIENT;
-  }
+#define NGT_MEMORY_CACHE_PREFETCH 1
+
+  // if (sc.explorationCoefficient == 0.0) {
+  //   sc.explorationCoefficient = NGT_EXPLORATION_COEFFICIENT;
+  // }
 
   // edgesize, epsilon, radius
-  
+
   // setup edgeSize
   size_t edgeSize = getEdgeSize(sc);
 
@@ -644,25 +647,38 @@ void NeighborhoodGraph::searchReadOnlyGraph(NGT::SearchContainer &sc, ObjectDist
   setupDistances(sc, seeds, COMPARATOR::compare);
   setupSeeds(sc, seeds, results, unchecked, distanceChecked);
 
-  double explorationRadius = (double)1.0 * sc.explorationCoefficient * sc.radius;
+  float explorationRadius = sc.explorationCoefficient * sc.radius;
   const size_t dimension   = objectSpace->getPaddedDimension();
   ReadOnlyGraphNode *nodes = &searchRepository.front();
   ObjectDistance result;
   ObjectDistance target;
+
+#ifdef NGT_MEMORY_CACHE_PREFETCH
   const size_t prefetchSize   = objectSpace->getPrefetchSize();
   const size_t prefetchOffset = objectSpace->getPrefetchOffset();
+#endif
+
+  size_t nsPtrsSize;
+  size_t neighborSize;
+  ReadOnlyGraphNode *neighbors;
+  decltype(&(*neighbors)[0]) neighborptr;
+  decltype(neighborptr) neighborendptr;
+  pair<uint32_t, PersistentObject *> *nsPtrs[edgeSize]; // 因为neighborSize是 neighbors->size(), edgeSize两者取小，所以取edgeSize即可。
+  size_t idx;
+  float distance;
+
   while (!unchecked.empty()) {
     target = unchecked.top();
     unchecked.pop();
     if (target.distance > explorationRadius) {
       break;
     }
-    auto *neighbors   = &nodes[target.id];
-    auto *neighborptr = &(*neighbors)[0];
-    size_t neighborSize = neighbors->size() < edgeSize ? neighbors->size() : edgeSize;
-    auto *neighborendptr = neighborptr + neighborSize;
-    pair<uint32_t, PersistentObject *> *nsPtrs[neighborSize];
-    size_t nsPtrsSize = 0;
+    neighbors   = &nodes[target.id];
+    neighborptr = &(*neighbors)[0];
+    neighborSize = neighbors->size() < edgeSize ? neighbors->size() : edgeSize;
+    neighborendptr = neighborptr + neighborSize;
+    // pair<uint32_t, PersistentObject *> *nsPtrs[neighborSize];
+    nsPtrsSize = 0;
     for (; neighborptr < neighborendptr; ++neighborptr) {
 #ifdef NGT_VISIT_COUNT
       sc.visitCount++;
@@ -670,24 +686,29 @@ void NeighborhoodGraph::searchReadOnlyGraph(NGT::SearchContainer &sc, ObjectDist
       if (!distanceChecked[(*(neighborptr)).first]) {
         distanceChecked.insert((*(neighborptr)).first);
         nsPtrs[nsPtrsSize] = neighborptr;
-        if (nsPtrsSize < prefetchOffset) {
-          unsigned char *ptr = reinterpret_cast<unsigned char *>((*(neighborptr)).second);
-          MemoryCache::prefetch(ptr, prefetchSize);
-        }
+#ifdef NGT_MEMORY_CACHE_PREFETCH
+          if (nsPtrsSize < prefetchOffset) {
+            unsigned char *ptr = reinterpret_cast<unsigned char *>((*(neighborptr)).second);
+            MemoryCache::prefetch(ptr, prefetchSize);
+          }
+#endif
         nsPtrsSize++;
       }
     }
-    for (size_t idx = 0; idx < nsPtrsSize; idx++) {
+
+    for (idx = 0; idx < nsPtrsSize; idx++) {
       neighborptr = nsPtrs[idx];
-      if (idx + prefetchOffset < nsPtrsSize) {
-        unsigned char *ptr = reinterpret_cast<unsigned char *>((*(nsPtrs[idx + prefetchOffset])).second);
-        MemoryCache::prefetch(ptr, prefetchSize);
-      }
+#ifdef  NGT_MEMORY_CACHE_PREFETCH
+        if (idx + prefetchOffset < nsPtrsSize) {
+          unsigned char *ptr = reinterpret_cast<unsigned char *>((*(nsPtrs[idx + prefetchOffset])).second);
+          MemoryCache::prefetch(ptr, prefetchSize);
+        }
+#endif
 
 #ifdef NGT_DISTANCE_COMPUTATION_COUNT
       sc.distanceComputationCount++;
 #endif
-      double distance =
+      distance =
           COMPARATOR::compare((void *)&sc.object[0],
                               (void *)&(*static_cast<PersistentObject *>(neighborptr->second))[0], dimension); // 这里返回的是double，但是用的是float接受。。。
       if (distance <= explorationRadius) {
@@ -698,7 +719,7 @@ void NeighborhoodGraph::searchReadOnlyGraph(NGT::SearchContainer &sc, ObjectDist
           if (results.size() > sc.size) {
             results.pop();
             sc.radius         = results.top().distance;
-            explorationRadius = (double)1.0 * sc.explorationCoefficient * sc.radius;
+            explorationRadius = sc.explorationCoefficient * sc.radius;
           }
         }
       }

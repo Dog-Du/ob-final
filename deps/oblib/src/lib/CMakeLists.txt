@@ -533,6 +533,6 @@ endif()
 
 endif()
 
-add_dependencies(oblib_lib faiss)
+# add_dependencies(oblib_lib faiss)
 add_dependencies(oblib_lib faiss_avx512)
 add_dependencies(oblib_lib faiss_lib)

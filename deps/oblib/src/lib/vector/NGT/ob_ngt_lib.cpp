@@ -239,7 +239,7 @@ create_index(VectorIndexPtr& index_handler,
     property.graphType = NGT::Property::GraphType::GraphTypeANNG;
 
     property.seedType = NGT::Property::SeedType::SeedTypeRandomNodes;
-    property.seedSize = 100;                    // 10
+    property.seedSize = 20;                    // 10
     property.dynamicEdgeSizeRate = 20;          // 20
     property.dynamicEdgeSizeBase = 30;          // 30
     property.batchSizeForCreation = 10000;      // 200
@@ -413,7 +413,10 @@ knn_search(VectorIndexPtr& index_handler,
         hnsw_handler->query_vector_[i] = query_vector[i];
     }
 
-    NGT::ObjectDistances objects;
+    static NGT::ObjectDistances objects;
+    objects.clear();
+    objects.reserve(topk);
+
     if (hnsw_handler->is_qg_ == true) {
     } else {
         NGT::SearchQuery qg_sc(hnsw_handler->query_vector_);
@@ -423,9 +426,9 @@ knn_search(VectorIndexPtr& index_handler,
         if (topk >= 10000) {
             qg_sc.setEpsilon(0.025);
             qg_sc.setSize(topk);
-            qg_sc.edgeSize = -2;
+            qg_sc.edgeSize = 600;
         } else {
-            qg_sc.setEpsilon(0.14);
+            qg_sc.setEpsilon(0.15);
             qg_sc.setSize(15);  // 10把结果集大小设置为15，应该可以提高一点召回率
             qg_sc.edgeSize = 650;
         }

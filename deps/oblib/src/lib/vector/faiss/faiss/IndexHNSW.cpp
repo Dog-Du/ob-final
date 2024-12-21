@@ -125,7 +125,7 @@ void hnsw_add_vertices(
     { // perform add
         RandomGenerator rng2(789);
 
-        int i1 = n;
+        int i1 = n; // i1 = 1
 
         for (int pt_level = hist.size() - 1;
              pt_level >= !index_hnsw.init_level0;
@@ -292,6 +292,7 @@ void hnsw_search(
 
 } // anonymous namespace
 
+
 void IndexHNSW::search(
         idx_t n,
         const float* x,
@@ -302,9 +303,19 @@ void IndexHNSW::search(
     FAISS_THROW_IF_NOT(k > 0);
 
     using RH = HeapBlockResultHandler<HNSW::C>;
-    RH bres(n, distances, labels, k);
+    static RH *bres = nullptr;
 
-    hnsw_search(this, n, x, bres, params_in);
+    if (bres == nullptr) {
+        bres = new RH(n, distances, labels, k);
+    } else {
+        bres->heap_dis_tab = distances;
+        bres->heap_ids_tab = labels;
+        bres->k = k;
+    }
+
+    // RH bres(n, distances, labels, k);
+
+    hnsw_search(this, n, x, *bres, params_in);
 
     if (is_similarity_metric(this->metric_type)) {
         // we need to revert the negated distances

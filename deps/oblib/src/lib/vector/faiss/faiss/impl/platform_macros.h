@@ -11,6 +11,10 @@
 #include <cstdint>
 #include <cstdio>
 
+#ifndef __AVX512F__
+#define __AVX512F__ 1
+#endif
+
 #ifdef _MSC_VER
 
 /*******************************************************

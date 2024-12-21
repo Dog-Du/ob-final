@@ -9,7 +9,6 @@
 
 // This file contains transposing kernels for AVX512 for // tiny float/int32
 // matrices, such as 16x2.
-
 #ifdef __AVX512F__
 
 #include <immintrin.h>
