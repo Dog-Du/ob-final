@@ -206,12 +206,11 @@ class PrimitiveComparator {
       a += 4;
       b += 4;
     }
-#endif
-
-    __attribute__((aligned(32))) float f[4];
+     __attribute__((aligned(32))) float f[4];
     _mm_store_ps(f, sum128);
 
     return f[0] + f[1] + f[2] + f[3];
+#endif
     // return s;
   }
 
