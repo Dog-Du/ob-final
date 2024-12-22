@@ -36,7 +36,7 @@ static const std::string index_path_prex = NGT_INDEX_PATH_DIR;
 static const std::string index_path_prex = "./";
 #endif
 
-namespace obvectorlib {
+namespace ob_ngt_lib {
 
 enum class ErrorType {
     // start with 1, 0 is reserved

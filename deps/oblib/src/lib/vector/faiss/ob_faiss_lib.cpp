@@ -27,7 +27,7 @@
 #include "faiss/impl/FaissException.h"
 #include "faiss/impl/HNSW.h"
 
-namespace ob_faiss_lib {
+namespace obvectorlib {
 
 enum class ErrorType {
     // start with 1, 0 is reserved
