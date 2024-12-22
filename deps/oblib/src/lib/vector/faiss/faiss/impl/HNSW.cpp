@@ -572,6 +572,21 @@ void HNSW::add_with_locks(
  * Searching
  **************************************************************/
 
+#define add_to_heap(i, d)                      \
+    do {                                       \
+        auto idx = i;                          \
+        auto dd = d;                           \
+        if (!sel || sel->is_member(idx)) {     \
+            if (dd < threshold) {              \
+                if (res.add_result(dd, idx)) { \
+                    threshold = res.threshold; \
+                    nres += 1;                 \
+                }                              \
+            }                                  \
+        }                                      \
+        candidates.push(idx, dd);              \
+    } while (0)
+
 using MinimaxHeap = HNSW::MinimaxHeap;
 using Node = HNSW::Node;
 using C = HNSW::C;
@@ -594,12 +609,13 @@ int search_from_candidates(
                                : hnsw.check_relative_distance;
     int efSearch = params ? params->efSearch : hnsw.efSearch;
     const IDSelector* sel = params ? params->sel : nullptr;
+    size_t saved_j[4];
 
     C::T threshold = res.threshold;
     for (int i = 0; i < candidates.size(); i++) {
         idx_t v1 = candidates.ids[i];
         float d = candidates.dis[i];
-        FAISS_ASSERT(v1 >= 0);
+        // FAISS_ASSERT(v1 >= 0);
         if (!sel || sel->is_member(v1)) {
             if (d < threshold) {
                 if (res.add_result(d, v1)) {
@@ -639,25 +655,12 @@ int search_from_candidates(
                 break;
 
             prefetch_L2(vt.visited.data() + v1);
+            // prefetch(vt.visited.data() + v1, 512);
             jmax += 1;
         }
 
         int counter = 0;
-        size_t saved_j[4];
-
         threshold = res.threshold;
-
-        auto add_to_heap = [&](const size_t idx, const float dis) {
-            if (!sel || sel->is_member(idx)) {
-                if (dis < threshold) {
-                    if (res.add_result(dis, idx)) {
-                        threshold = res.threshold;
-                        nres += 1;
-                    }
-                }
-            }
-            candidates.push(idx, dis);
-        };
 
         for (size_t j = begin; j < jmax; j++) {
             int v1 = hnsw.neighbors[j];
@@ -679,9 +682,10 @@ int search_from_candidates(
                         dis[2],
                         dis[3]);
 
-                for (size_t id4 = 0; id4 < 4; id4++) {
-                    add_to_heap(saved_j[id4], dis[id4]);
-                }
+                add_to_heap(saved_j[0], dis[0]);
+                add_to_heap(saved_j[1], dis[1]);
+                add_to_heap(saved_j[2], dis[2]);
+                add_to_heap(saved_j[3], dis[3]);
 
                 ndis += 4;
 
@@ -713,6 +717,22 @@ int search_from_candidates(
 
     return nres;
 }
+#undef add_to_heap
+
+
+#define add_to_heap(i, d)                                                    \
+    do {                                                                     \
+        auto idx = i;                                                        \
+        auto dd = d;                                                         \
+        if (top_candidates.top().first > dd || top_candidates.size() < ef) { \
+            candidates.emplace(dd, idx);                                     \
+            top_candidates.emplace(dd, idx);                                 \
+                                                                             \
+            if (top_candidates.size() > ef) {                                \
+                top_candidates.pop();                                        \
+            }                                                                \
+        }                                                                    \
+    } while (0)
 
 std::priority_queue<HNSW::Node> search_from_candidate_unbounded(
         const HNSW& hnsw,
@@ -724,6 +744,8 @@ std::priority_queue<HNSW::Node> search_from_candidate_unbounded(
     int ndis = 0;
     std::priority_queue<Node> top_candidates;
     std::priority_queue<Node, std::vector<Node>, std::greater<Node>> candidates;
+    size_t begin, end;
+    size_t saved_j[4];
 
     top_candidates.push(node);
     candidates.push(node);
@@ -740,8 +762,6 @@ std::priority_queue<HNSW::Node> search_from_candidate_unbounded(
         }
 
         candidates.pop();
-
-        size_t begin, end;
         hnsw.neighbor_range(v0, 0, &begin, &end);
 
         // a faster version: reference version in unit test test_hnsw.cpp
@@ -757,19 +777,18 @@ std::priority_queue<HNSW::Node> search_from_candidate_unbounded(
         }
 
         int counter = 0;
-        size_t saved_j[4];
 
-        auto add_to_heap = [&](const size_t idx, const float dis) {
-            if (top_candidates.top().first > dis ||
-                top_candidates.size() < ef) {
-                candidates.emplace(dis, idx);
-                top_candidates.emplace(dis, idx);
+        // auto add_to_heap = [&](const size_t idx, const float dis) {
+        //     if (top_candidates.top().first > dis ||
+        //         top_candidates.size() < ef) {
+        //         candidates.emplace(dis, idx);
+        //         top_candidates.emplace(dis, idx);
 
-                if (top_candidates.size() > ef) {
-                    top_candidates.pop();
-                }
-            }
-        };
+        //         if (top_candidates.size() > ef) {
+        //             top_candidates.pop();
+        //         }
+        //     }
+        // };
 
         for (size_t j = begin; j < jmax; j++) {
             int v1 = hnsw.neighbors[j];
@@ -791,9 +810,10 @@ std::priority_queue<HNSW::Node> search_from_candidate_unbounded(
                         dis[2],
                         dis[3]);
 
-                for (size_t id4 = 0; id4 < 4; id4++) {
-                    add_to_heap(saved_j[id4], dis[id4]);
-                }
+                add_to_heap(saved_j[0], dis[0]);
+                add_to_heap(saved_j[1], dis[1]);
+                add_to_heap(saved_j[2], dis[2]);
+                add_to_heap(saved_j[3], dis[3]);
 
                 ndis += 4;
 
@@ -819,6 +839,7 @@ std::priority_queue<HNSW::Node> search_from_candidate_unbounded(
 
     return top_candidates;
 }
+#undef add_to_heap
 
 /// greedily update a nearest vector at a given level
 HNSWStats greedy_update_nearest(

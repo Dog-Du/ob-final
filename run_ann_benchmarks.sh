@@ -3,7 +3,7 @@ cd ann-benchmarks
 # 运行基础 ann_benchmarks 测试
 #vtime python run.py --algorithm oceanbase --local --force --dataset sift-128-euclidean
 ## 测试时导入数据并构建索引
-python run.py --algorithm oceanbase --local --force --dataset sift-128-euclidean --runs 3 --skip_fit
+python run.py --algorithm oceanbase --local --force --dataset sift-128-euclidean --runs 10 --skip_fit
 # ## 测试时跳过导入数据及构建索引
 # # time python run.py --algorithm oceanbase --local --force --dataset sift-128-euclidean --runs 1 --skip_fit
 # # 计算召回率及 QPS

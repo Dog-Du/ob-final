@@ -154,6 +154,17 @@ struct FlatL2Dis : FlatCodesDistanceComputer {
         float dp1 = 0;
         float dp2 = 0;
         float dp3 = 0;
+
+        // prefetch(y0, (d << 2));
+        // prefetch(y1, (d << 2));
+        // prefetch(y2, (d << 2));
+        // prefetch(y3, (d << 2));
+
+        prefetch_L2(y0);
+        prefetch_L2(y1);
+        prefetch_L2(y2);
+        prefetch_L2(y3);
+
         fvec_L2sqr_batch_4(q, y0, y1, y2, y3, d, dp0, dp1, dp2, dp3);
         dis0 = dp0;
         dis1 = dp1;
@@ -218,6 +229,12 @@ struct FlatIPDis : FlatCodesDistanceComputer {
         float dp1 = 0;
         float dp2 = 0;
         float dp3 = 0;
+
+        prefetch(y0, (d << 2));
+        prefetch(y1, (d << 2));
+        prefetch(y2, (d << 2));
+        prefetch(y3, (d << 2));
+
         fvec_inner_product_batch_4(q, y0, y1, y2, y3, d, dp0, dp1, dp2, dp3);
         dis0 = dp0;
         dis1 = dp1;

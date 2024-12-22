@@ -27,7 +27,7 @@
 #include "faiss/impl/FaissException.h"
 #include "faiss/impl/HNSW.h"
 
-namespace ob_faiss_lib {
+namespace obvectorlib {
 
 enum class ErrorType {
     // start with 1, 0 is reserved
@@ -793,6 +793,7 @@ int fserialize(VectorIndexPtr& index_handler, std::ostream& out_stream) {
 }
 
 int fdeserialize(VectorIndexPtr& index_handler, std::istream& in_stream) {
+    omp_set_num_threads(10);
     auto* hnsw_handler = static_cast<HnswIndexHandler*>(index_handler);
     bool use_static = hnsw_handler->get_use_static();
     int max_degree = hnsw_handler->get_max_degree();

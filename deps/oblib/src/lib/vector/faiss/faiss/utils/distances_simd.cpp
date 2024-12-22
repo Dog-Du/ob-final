@@ -18,6 +18,7 @@
 
 #include <faiss/impl/FaissAssert.h>
 #include <faiss/impl/platform_macros.h>
+#include <faiss/utils/prefetch.h>
 #include <faiss/utils/simdlib.h>
 
 #ifdef __SSE3__
@@ -211,21 +212,25 @@ float fvec_norm_L2sqr(const float* x, size_t d) {
 FAISS_PRAGMA_IMPRECISE_FUNCTION_END
 
 FAISS_PRAGMA_IMPRECISE_FUNCTION_BEGIN
-float fvec_L2sqr(const float* a, const float* b, size_t size) {
-    const float *last = a + size;
-     __m512 sum512 = _mm512_setzero_ps();
-    while (a < last) {
-      __m512 v = _mm512_sub_ps(_mm512_loadu_ps(a), _mm512_loadu_ps(b));
-      sum512 = _mm512_add_ps(sum512, _mm512_mul_ps(v, v));
-      a += 16;
-      b += 16;
+float fvec_L2sqr(const float* x, const float* y, size_t d) {
+    prefetch(x, (d << 2));
+    prefetch(y, (d << 2));
+
+    const float* last = x + d;
+    __m512 sum512 = _mm512_setzero_ps();
+    __m512 v_x, v_y;
+
+    while (x < last) {
+        v_x = _mm512_loadu_ps(x);
+        v_y = _mm512_loadu_ps(y);
+
+        sum512 = _mm512_fmadd_ps(_mm512_sub_ps(v_x, v_y), _mm512_sub_ps(v_x, v_y), sum512);
+
+        x += 16;
+        y += 16;
     }
 
-    __m256 sum256 = _mm256_add_ps(_mm512_extractf32x8_ps(sum512, 0), _mm512_extractf32x8_ps(sum512, 1));
-    __m128 sum128 = _mm_add_ps(_mm256_extractf128_ps(sum256, 0), _mm256_extractf128_ps(sum256, 1));
-    __attribute__((aligned(32))) float f[4];
-    _mm_store_ps(f, sum128);
-    return f[0] + f[1] + f[2] + f[3];
+    return _mm512_reduce_add_ps(sum512);
 }
 
 FAISS_PRAGMA_IMPRECISE_FUNCTION_END
@@ -277,34 +282,36 @@ void fvec_L2sqr_batch_4(
         float& dis1,
         float& dis2,
         float& dis3) {
+    const float* last = x + d;
+    __m512 sum512_0 = _mm512_setzero_ps();
+    __m512 sum512_1 = _mm512_setzero_ps();
+    __m512 sum512_2 = _mm512_setzero_ps();
+    __m512 sum512_3 = _mm512_setzero_ps();
+    __m512 v_x, v_y0, v_y1, v_y2, v_y3;
 
-    // dis0 = fvec_L2sqr(x, y0, d);
-    // dis1 = fvec_L2sqr(x, y1, d);
-    // dis2 = fvec_L2sqr(x, y2, d);
-    // dis3 = fvec_L2sqr(x, y3, d);
+    while (x < last) {
+        v_x = _mm512_loadu_ps(x);
+        v_y0 = _mm512_loadu_ps(y0);
+        v_y1 = _mm512_loadu_ps(y1);
+        v_y2 = _mm512_loadu_ps(y2);
+        v_y3 = _mm512_loadu_ps(y3);
 
-    #pragma omp parallel sections
-    {
-        #pragma omp section
-        {
-            dis0 = fvec_L2sqr(x, y0, d);
-        }
+        sum512_0 = _mm512_fmadd_ps(_mm512_sub_ps(v_x, v_y0), _mm512_sub_ps(v_x, v_y0), sum512_0);
+        sum512_1 = _mm512_fmadd_ps(_mm512_sub_ps(v_x, v_y1), _mm512_sub_ps(v_x, v_y1), sum512_1);
+        sum512_2 = _mm512_fmadd_ps(_mm512_sub_ps(v_x, v_y2), _mm512_sub_ps(v_x, v_y2), sum512_2);
+        sum512_3 = _mm512_fmadd_ps(_mm512_sub_ps(v_x, v_y3), _mm512_sub_ps(v_x, v_y3), sum512_3);
 
-        #pragma omp section
-        {
-            dis1 = fvec_L2sqr(x, y1, d);
-        }
-
-        #pragma omp section
-        {
-            dis2 = fvec_L2sqr(x, y2, d);
-        }
-
-        #pragma omp section
-        {
-            dis3 = fvec_L2sqr(x, y3, d);
-        }
+        x  += 16;
+        y0 += 16;
+        y1 += 16;
+        y2 += 16;
+        y3 += 16;
     }
+
+    dis0 = _mm512_reduce_add_ps(sum512_0);
+    dis1 = _mm512_reduce_add_ps(sum512_1);
+    dis2 = _mm512_reduce_add_ps(sum512_2);
+    dis3 = _mm512_reduce_add_ps(sum512_3);
 }
 FAISS_PRAGMA_IMPRECISE_FUNCTION_END
 

@@ -26,6 +26,7 @@
 
 namespace NGT {
 
+
 class MemoryCache {
  public:
   inline static void prefetch(unsigned char *ptr, const size_t byteSizeOfObject) { // 这个是用来减少cache miss的，但是真的有用吗？ -> 真有用
@@ -157,15 +158,19 @@ class PrimitiveComparator {
     const float *last = a + size;
 #if defined(NGT_AVX512)
     __m512 sum512 = _mm512_setzero_ps();
+    __m512 v_a, v_b;
+
     while (a < last) {
-      __m512 v = _mm512_sub_ps(_mm512_loadu_ps(a), _mm512_loadu_ps(b));
-      sum512 = _mm512_add_ps(sum512, _mm512_mul_ps(v, v));
-      a += 16;
-      b += 16;
+        v_a = _mm512_loadu_ps(a);
+        v_b = _mm512_loadu_ps(b);
+
+        sum512 = _mm512_fmadd_ps(_mm512_sub_ps(v_a, v_b), _mm512_sub_ps(v_a, v_b), sum512);
+
+        a += 16;
+        b += 16;
     }
 
-    __m256 sum256 = _mm256_add_ps(_mm512_extractf32x8_ps(sum512, 0), _mm512_extractf32x8_ps(sum512, 1));
-    __m128 sum128 = _mm_add_ps(_mm256_extractf128_ps(sum256, 0), _mm256_extractf128_ps(sum256, 1));
+    return _mm512_reduce_add_ps(sum512);
 #elif defined(NGT_AVX2)
     __m256 sum256    = _mm256_setzero_ps();
     __m256 v;
