@@ -604,6 +604,7 @@ int knn_search(
             static_cast<HnswIndexHandler*>(index_handler);
     auto& index = hnsw_handler->get_index();
 
+    omp_set_num_threads(0);
     // 使用malloc而不是使用new的原因：在适配层，会给与一个内存池分配，他会进行内存释放。
     // 但是这里的内存是自己使用的，为了防止内存泄漏，使用malloc和free，而不是new和delete
     float* dist_result = (float*)malloc(sizeof(float) * topk);
@@ -633,7 +634,7 @@ int knn_search(
         // FAISS_ASSERT(hnsw_handler->id_data_map_.size() == index->ntotal);
     }
 
-    set_hnsw_efsearch(index.get(), topk, 6000);
+    set_hnsw_efsearch(index.get(), topk, 5500);
     // 不知道为什么如果没有加FAISS_TEST就会产生空表。
     // FAISS_ASSERT(index->ntotal == hnsw_handler->id_data_map_.size());
     int ret = 0;

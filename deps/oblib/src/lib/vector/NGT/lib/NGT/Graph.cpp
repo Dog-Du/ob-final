@@ -919,14 +919,6 @@ NeighborhoodGraph::searchReadOnlyGraph(NGT::SearchContainer& sc, ObjectDistances
                         reinterpret_cast<unsigned char*>((*(nsPtrs[idx + prefetchOffset])).second);
                     MemoryCache::prefetch(ptr, prefetchSize);
                 }
-                MemoryCache::prefetch(&(*static_cast<PersistentObject*>(neighborptr0->second))[0],
-                                      dimension << 2);
-                MemoryCache::prefetch(&(*static_cast<PersistentObject*>(neighborptr1->second))[0],
-                                      dimension << 2);
-                MemoryCache::prefetch(&(*static_cast<PersistentObject*>(neighborptr2->second))[0],
-                                      dimension << 2);
-                MemoryCache::prefetch(&(*static_cast<PersistentObject*>(neighborptr3->second))[0],
-                                      dimension << 2);
 #endif
                 fvec_L2sqr_batch_4(
                     (float*)&sc.object[0],

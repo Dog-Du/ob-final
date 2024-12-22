@@ -424,7 +424,7 @@ knn_search(VectorIndexPtr& index_handler,
         qg_sc.setResults(&objects);
 
         if (topk >= 10000) {
-            qg_sc.setEpsilon(0.025);
+            qg_sc.setEpsilon(0.02);
             qg_sc.setSize(topk);
             qg_sc.edgeSize = 600;
         } else {
