@@ -213,9 +213,6 @@ FAISS_PRAGMA_IMPRECISE_FUNCTION_END
 
 FAISS_PRAGMA_IMPRECISE_FUNCTION_BEGIN
 float fvec_L2sqr(const float* x, const float* y, size_t d) {
-    prefetch(x, (d << 2));
-    prefetch(y, (d << 2));
-
     const float* last = x + d;
     __m512 sum512 = _mm512_setzero_ps();
     __m512 v_x, v_y;

@@ -107,6 +107,7 @@ struct FlatL2Dis : FlatCodesDistanceComputer {
 
     float distance_to_code(const uint8_t* code) final {
         ndis++;
+        prefetch_L2(code);
         return fvec_L2sqr(q, (float*)code, d);
     }
 

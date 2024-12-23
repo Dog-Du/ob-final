@@ -142,9 +142,7 @@ class RowDataHandler { // 对列数据进行简单的内存管理
     uint32_t data_length_;
 };
 
-class VectorDataHandler : public RowDataHandler {
-
-};
+class VectorDataHandler : public RowDataHandler {};
 
 class HnswIndexHandler {
    public:
@@ -421,6 +419,7 @@ int add_index(
             // omp_set_num_threads(8);
             FAISS_ASSERT(index->ntotal >= 1000'000);
             get_init() = true;
+            omp_set_num_threads(0);
         }
 
         return 0;
@@ -487,6 +486,7 @@ int add_index(
             // omp_set_num_threads(8);
             FAISS_ASSERT(index->ntotal >= 1000'000);
             get_init() = true;
+            omp_set_num_threads(0);
             // FAISS_ASSERT(hnsw_handler->id_data_map_.size() == index->ntotal);
         }
 
@@ -561,11 +561,12 @@ int knn_search(
         }
         hnsw_handler->ids_.clear();
         hnsw_handler->vector_list_.clear();
+        omp_set_num_threads(0);
         // FAISS_ASSERT(hnsw_handler->id_data_map_.size() == index->ntotal);
     }
 
     // FAISS_ASSERT(hnsw_handler->id_data_map_.size() == index->ntotal);
-    set_hnsw_efsearch(index.get(), topk, 6000);
+    set_hnsw_efsearch(index.get(), topk, 5500);
     int ret = 0;
     try {
         index->search(1, query_vector, topk, dist_result, ids_result);
@@ -604,7 +605,6 @@ int knn_search(
             static_cast<HnswIndexHandler*>(index_handler);
     auto& index = hnsw_handler->get_index();
 
-    omp_set_num_threads(0);
     // 使用malloc而不是使用new的原因：在适配层，会给与一个内存池分配，他会进行内存释放。
     // 但是这里的内存是自己使用的，为了防止内存泄漏，使用malloc和free，而不是new和delete
     float* dist_result = (float*)malloc(sizeof(float) * topk);
@@ -631,6 +631,7 @@ int knn_search(
         }
         hnsw_handler->ids_.clear();
         hnsw_handler->vector_list_.clear();
+        omp_set_num_threads(0);
         // FAISS_ASSERT(hnsw_handler->id_data_map_.size() == index->ntotal);
     }
 
@@ -794,7 +795,7 @@ int fserialize(VectorIndexPtr& index_handler, std::ostream& out_stream) {
 }
 
 int fdeserialize(VectorIndexPtr& index_handler, std::istream& in_stream) {
-    omp_set_num_threads(10);
+    omp_set_num_threads(8);
     auto* hnsw_handler = static_cast<HnswIndexHandler*>(index_handler);
     bool use_static = hnsw_handler->get_use_static();
     int max_degree = hnsw_handler->get_max_degree();
@@ -811,7 +812,8 @@ int fdeserialize(VectorIndexPtr& index_handler, std::istream& in_stream) {
                  dim,
                  max_degree,
                  ef_construction,
-                 ef_search, nullptr)) != 0) {
+                 ef_search,
+                 nullptr)) != 0) {
         return ret;
     }
 
@@ -833,6 +835,7 @@ int fdeserialize(VectorIndexPtr& index_handler, std::istream& in_stream) {
         ret = static_cast<int>(ErrorType::UNKNOWN_ERROR);
     }
 
+    omp_set_num_threads(0);
     // FAISS_ASSERT(hnsw_handler->id_data_map_.size() == index->ntotal);
     return ret;
 }

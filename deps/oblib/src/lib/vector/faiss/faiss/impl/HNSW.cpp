@@ -693,11 +693,25 @@ int search_from_candidates(
             }
         }
 
-        for (size_t icnt = 0; icnt < counter; icnt++) {
-            float dis = qdis(saved_j[icnt]);
-            add_to_heap(saved_j[icnt], dis);
+        // for (size_t icnt = 0; icnt < counter; icnt++) {
+        //     float dis = qdis(saved_j[icnt]);
+        //     add_to_heap(saved_j[icnt], dis);
 
-            ndis += 1;
+        //     ndis += 1;
+        // }
+
+        switch (counter) { // 想避免使用if-else，用switch可以避免分支预测错误，虽然只是没啥用的常量级优化
+            case 3:
+                add_to_heap(saved_j[2], qdis(saved_j[2]));
+                ++ndis;
+            case 2:
+                add_to_heap(saved_j[1], qdis(saved_j[1]));
+                ++ndis;
+            case 1:
+                add_to_heap(saved_j[0], qdis(saved_j[0]));
+                ++ndis;
+            default: {
+            }
         }
 
         nstep++;
@@ -718,7 +732,6 @@ int search_from_candidates(
     return nres;
 }
 #undef add_to_heap
-
 
 #define add_to_heap(i, d)                                                    \
     do {                                                                     \

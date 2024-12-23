@@ -133,7 +133,8 @@ void IndexIDMapTemplate<IndexT>::search(
     }
     index->search(n, x, k, distances, labels, params);
     idx_t* li = labels;
-#pragma omp parallel for
+    
+// #pragma omp parallel for // 反而很慢，这个并行化有问题
     for (idx_t i = 0; i < n * k; i++) {
         li[i] = li[i] < 0 ? li[i] : id_map[li[i]];
     }
